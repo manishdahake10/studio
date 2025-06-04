@@ -7,7 +7,7 @@ import { CurrentWeather } from './CurrentWeather';
 import { ForecastDisplay } from './ForecastDisplay';
 import { WeatherSummary } from './WeatherSummary';
 import { ForecastCharts } from './ForecastCharts';
-import { AirPollutionDisplay } from './AirPollutionDisplay'; // New Import
+import { AirPollutionDisplay } from './AirPollutionDisplay';
 import { fetchWeatherData } from '@/lib/weather-api';
 import type { WeatherAPIResponse } from '@/types/weather';
 import { useToast } from "@/hooks/use-toast";
@@ -40,17 +40,22 @@ export function WeatherDashboard() {
       setWeatherData(data);
       setCity(data.location.name); 
       localStorage.setItem(LAST_CITY_KEY, data.location.name);
-      if (!data.airPollution && process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY) {
-        toast({
-            title: "Air Pollution Data",
-            description: "Air pollution data might be unavailable for this location, or there was an issue fetching it. The API key seems to be set.",
-            variant: "default",
-        });
-      } else if (!data.airPollution && !process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY) {
+      
+      const airPollutionKeyMissing = !process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY;
+      const noCurrentAirData = !data.airPollution;
+      const noForecastAirData = !data.airPollutionForecast || data.airPollutionForecast.length === 0;
+
+      if (airPollutionKeyMissing && (noCurrentAirData || noForecastAirData)) {
          toast({
             title: "Air Pollution API Key Missing",
-            description: "NEXT_PUBLIC_AIR_POLLUTION_API_KEY is not set in .env. Air pollution data cannot be fetched.",
+            description: "NEXT_PUBLIC_AIR_POLLUTION_API_KEY is not set in .env. Air pollution data (current and forecast) cannot be fetched.",
             variant: "destructive",
+        });
+      } else if (!airPollutionKeyMissing && (noCurrentAirData || noForecastAirData)) {
+         toast({
+            title: "Air Pollution Data Limited",
+            description: `Air pollution data (current or forecast) might be unavailable for ${data.location.name}, or there was an issue fetching it. The API key seems to be set.`,
+            variant: "default",
         });
       }
 
@@ -103,12 +108,24 @@ export function WeatherDashboard() {
   const AirPollutionSkeleton = () => (
     <div className="p-6 border rounded-lg shadow-sm mt-6">
       <Skeleton className="h-7 w-1/3 mb-3" />
-      <Skeleton className="h-6 w-1/4 mb-4" />
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-        {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-5 w-full" />)}
+      <Skeleton className="h-4 w-1/4 mb-2" /> {/* Date */}
+      <Skeleton className="h-8 w-1/4 mb-4 rounded-md" /> {/* Badge */}
+      <div className="flex space-x-2 mb-4">
+        <Skeleton className="h-9 w-1/2 rounded-md" /> {/* Tab 1 */}
+        <Skeleton className="h-9 w-1/2 rounded-md" /> {/* Tab 2 */}
       </div>
+      <Skeleton className="h-5 w-1/2 mb-2" /> {/* Pollutant Levels title */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
+        {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-4 w-full" />)}
+      </div>
+      <Skeleton className="h-6 w-2/3 mb-2" /> {/* Chart title */}
+      <Skeleton className="h-[150px] w-full rounded-md mb-4" /> {/* Chart placeholder */}
+      <Skeleton className="h-6 w-1/3 mb-2" /> {/* Health Advisory title */}
+      <Skeleton className="h-4 w-full mb-1" />
+      <Skeleton className="h-4 w-3/4" />
     </div>
   );
+
 
   const ForecastSkeleton = () => (
     <div className="mt-6">
@@ -162,7 +179,8 @@ export function WeatherDashboard() {
           </AlertDescription>
         </Alert>
       )}
-      {error && !process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY && (
+      {/* Specific alert for air pollution API key handled by toast now, but can keep a general one if needed */}
+      {/* {error && !process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY && (
          <Alert variant="destructive" className="my-4">
           <Terminal className="h-4 w-4" />
           <AlertTitle>Air Pollution API Key Missing</AlertTitle>
@@ -170,7 +188,7 @@ export function WeatherDashboard() {
             The OpenWeatherMap API key for air pollution (NEXT_PUBLIC_AIR_POLLUTION_API_KEY) is not configured. Please set it in your .env file. Air pollution data cannot be shown.
           </AlertDescription>
         </Alert>
-      )}
+      )} */}
 
 
       {error && process.env.NEXT_PUBLIC_WEATHER_API_KEY && (
@@ -186,25 +204,11 @@ export function WeatherDashboard() {
       {!isLoading && weatherData && (
         <div className="space-y-6">
           <CurrentWeather data={weatherData} />
-          {weatherData.airPollution && <AirPollutionDisplay data={weatherData.airPollution} />}
-          {(!weatherData.airPollution && !process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY) && (
-             <Alert variant="default" className="my-4">
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Air Pollution API Key Missing</AlertTitle>
-                <AlertDescription>
-                  The NEXT_PUBLIC_AIR_POLLUTION_API_KEY is not set in your .env file. Air pollution data cannot be displayed.
-                </AlertDescription>
-            </Alert>
-          )}
-           {(!weatherData.airPollution && process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY && !error?.toLowerCase().includes('air pollution')) && (
-             <Alert variant="default" className="my-4">
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Air Pollution Data Unavailable</AlertTitle>
-                <AlertDescription>
-                  Air pollution data is currently unavailable for {weatherData.location.name} or there was an issue fetching it.
-                </AlertDescription>
-            </Alert>
-          )}
+          <AirPollutionDisplay 
+            currentPollution={weatherData.airPollution} 
+            forecastPollution={weatherData.airPollutionForecast}
+            locationName={weatherData.location.name}
+          />
           <ForecastDisplay forecastDays={weatherData.forecast?.forecastday} />
           <ForecastCharts forecastDays={weatherData.forecast?.forecastday} />
           <WeatherSummary weatherData={weatherData} />

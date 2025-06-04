@@ -131,7 +131,7 @@ export interface AQIComponents {
   nh3: number; // Ammonia, μg/m3
 }
 
-export interface AirPollutionData {
+export interface AirPollutionDataEntry {
   dt: number; // Date and time, Unix, UTC
   main: {
     aqi: number; // Air Quality Index. Possible values: 1, 2, 3, 4, 5. Where 1 = Good, 2 = Fair, 3 = Moderate, 4 = Poor, 5 = Very Poor.
@@ -139,11 +139,18 @@ export interface AirPollutionData {
   components: AQIComponents;
 }
 
+export interface AirPollutionResponse {
+  coord: { lat: number; lon: number };
+  list: AirPollutionDataEntry[];
+}
+
+
 export interface WeatherAPIResponse {
   location: WeatherLocation;
   current: CurrentWeatherData;
   forecast?: {
     forecastday: ForecastDay[];
   };
-  airPollution?: AirPollutionData;
+  airPollution?: AirPollutionDataEntry; // Current air pollution
+  airPollutionForecast?: AirPollutionDataEntry[]; // Array of forecasted air pollution data
 }

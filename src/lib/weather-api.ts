@@ -1,5 +1,5 @@
 
-import type { WeatherAPIResponse, ForecastDay, HourForecast, AstroForecast, DayForecast, AirPollutionData } from '@/types/weather';
+import type { WeatherAPIResponse, ForecastDay, HourForecast, AstroForecast, DayForecast, AirPollutionDataEntry } from '@/types/weather';
 
 const WEATHER_API_KEY = process.env.NEXT_PUBLIC_WEATHER_API_KEY;
 const AIR_POLLUTION_API_KEY = process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY;
@@ -25,7 +25,9 @@ export async function fetchWeatherData(city: string): Promise<WeatherAPIResponse
 
   let lat: number | null = null;
   let lon: number | null = null;
-  let airPollutionData: AirPollutionData | undefined = undefined;
+  let currentAirPollution: AirPollutionDataEntry | undefined = undefined;
+  let airPollutionForecastList: AirPollutionDataEntry[] | undefined = undefined;
+
 
   try {
     const [currentWeatherResponse, forecastResponse] = await Promise.all([
@@ -73,33 +75,60 @@ export async function fetchWeatherData(city: string): Promise<WeatherAPIResponse
     }
     const forecastData = await forecastResponse.json();
 
-    // Fetch Air Pollution Data
+    // Fetch Air Pollution Data (Current and Forecast)
     if (lat !== null && lon !== null) {
       if (!AIR_POLLUTION_API_KEY) {
         console.warn('Air Pollution API key is not configured. Skipping air pollution data. Please set NEXT_PUBLIC_AIR_POLLUTION_API_KEY.');
       } else {
-        const airPollutionUrl = `${OPENWEATHER_BASE_URL}/air_pollution?lat=${lat}&lon=${lon}&appid=${AIR_POLLUTION_API_KEY}`;
+        const currentAirPollutionUrl = `${OPENWEATHER_BASE_URL}/air_pollution?lat=${lat}&lon=${lon}&appid=${AIR_POLLUTION_API_KEY}`;
+        const forecastAirPollutionUrl = `${OPENWEATHER_BASE_URL}/air_pollution/forecast?lat=${lat}&lon=${lon}&appid=${AIR_POLLUTION_API_KEY}`;
+        
         try {
-          const airPollutionResponse = await fetch(airPollutionUrl);
-          if (!airPollutionResponse.ok) {
-            let pollutionErrorMessage = `Air pollution API request failed: ${airPollutionResponse.status}`;
-            try {
-                const errorData = await airPollutionResponse.json();
+          const [currentAirPollutionResponse, forecastAirPollutionResponse] = await Promise.all([
+            fetch(currentAirPollutionUrl),
+            fetch(forecastAirPollutionUrl)
+          ]);
+
+          // Handle current air pollution
+          if (!currentAirPollutionResponse.ok) {
+            let pollutionErrorMessage = `Current air pollution API request failed: ${currentAirPollutionResponse.status}`;
+             try {
+                const errorData = await currentAirPollutionResponse.json();
                 if (errorData && errorData.message) {
-                    pollutionErrorMessage = `Air Pollution: ${errorData.message} (code ${errorData.cod})`;
+                    pollutionErrorMessage = `Current Air Pollution: ${errorData.message} (code ${errorData.cod})`;
                     if (String(errorData.cod) === "401") {
-                        pollutionErrorMessage = `Invalid OpenWeatherMap API key for air pollution: ${errorData.message}. Please ensure your NEXT_PUBLIC_AIR_POLLUTION_API_KEY in .env is correct.`;
+                        pollutionErrorMessage = `Invalid OpenWeatherMap API key for current air pollution: ${errorData.message}. Please ensure your NEXT_PUBLIC_AIR_POLLUTION_API_KEY in .env is correct.`;
                     }
                 }
             } catch (parseError) { /* ignore */ }
             console.error(pollutionErrorMessage);
-            // Do not throw error here, weather data can still be shown
           } else {
-            const pollutionJson = await airPollutionResponse.json();
+            const pollutionJson = await currentAirPollutionResponse.json();
             if (pollutionJson.list && pollutionJson.list.length > 0) {
-              airPollutionData = pollutionJson.list[0] as AirPollutionData;
+              currentAirPollution = pollutionJson.list[0] as AirPollutionDataEntry;
             }
           }
+
+          // Handle forecast air pollution
+           if (!forecastAirPollutionResponse.ok) {
+            let pollutionErrorMessage = `Forecast air pollution API request failed: ${forecastAirPollutionResponse.status}`;
+             try {
+                const errorData = await forecastAirPollutionResponse.json();
+                if (errorData && errorData.message) {
+                    pollutionErrorMessage = `Forecast Air Pollution: ${errorData.message} (code ${errorData.cod})`;
+                     if (String(errorData.cod) === "401") {
+                        pollutionErrorMessage = `Invalid OpenWeatherMap API key for forecast air pollution: ${errorData.message}. Please ensure your NEXT_PUBLIC_AIR_POLLUTION_API_KEY in .env is correct.`;
+                    }
+                }
+            } catch (parseError) { /* ignore */ }
+            console.error(pollutionErrorMessage);
+          } else {
+            const pollutionForecastJson = await forecastAirPollutionResponse.json();
+            if (pollutionForecastJson.list && pollutionForecastJson.list.length > 0) {
+              airPollutionForecastList = pollutionForecastJson.list as AirPollutionDataEntry[];
+            }
+          }
+
         } catch (pollutionError: any) {
           console.error("Error fetching air pollution data:", pollutionError.message);
         }
@@ -148,7 +177,7 @@ export async function fetchWeatherData(city: string): Promise<WeatherAPIResponse
       vis_km: currentData.visibility ? metersToKm(currentData.visibility) : 10,
       vis_miles: currentData.visibility ? parseFloat((metersToKm(currentData.visibility) * 0.621371).toFixed(1)) : 6,
       uv: 0, 
-      gust_mph: currentData.wind.gust ? Math.round(currentData.wind.gust * 2.23694) : Math.round(currentData.wind.speed * 2.23694), // Use wind_speed if gust not present
+      gust_mph: currentData.wind.gust ? Math.round(currentData.wind.gust * 2.23694) : Math.round(currentData.wind.speed * 2.23694), 
       gust_kph: currentData.wind.gust ? Math.round(currentData.wind.gust * 3.6) : Math.round(currentData.wind.speed * 3.6),
     };
 
@@ -271,7 +300,8 @@ export async function fetchWeatherData(city: string): Promise<WeatherAPIResponse
       forecast: {
         forecastday: forecastDaysProcessed,
       },
-      airPollution: airPollutionData,
+      airPollution: currentAirPollution,
+      airPollutionForecast: airPollutionForecastList,
     } as WeatherAPIResponse;
 
   } catch (networkOrThrownError: any) {
