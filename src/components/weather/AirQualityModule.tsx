@@ -5,7 +5,7 @@ import type { AirPollutionDataEntry, AQIComponents } from '@/types/weather';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { AlertCircle, Info, Leaf, BarChart3, Wind, TrendingUp } from 'lucide-react';
+import { AlertCircle, Info, Leaf, TrendingUp, Wind } from 'lucide-react';
 import {
   ChartContainer,
   ChartTooltip as ShadTooltip,
@@ -44,7 +44,7 @@ const forecastChartConfig = {
 
 const getAQICategory = (aqi: number): { name: string; colorClass: string; advice: string } => {
   if (aqi === 1) return { name: 'Good', colorClass: 'bg-green-500 text-white', advice: 'Air quality is satisfactory, and air pollution poses little or no risk.' };
-  if (aqi === 2) return { name: 'Fair', colorClass: 'bg-yellow-400 text-black', advice: 'Air quality is acceptable. However, there may be a risk for some people, particularly those who are unusually sensitive to air pollution.' };
+  if (aqi === 2) return { name: 'Fair', colorClass: 'bg-yellow-400 text-black', advice: 'Air quality is acceptable. However, sensitive individuals may experience minor health effects.' };
   if (aqi === 3) return { name: 'Moderate', colorClass: 'bg-orange-500 text-white', advice: 'Members of sensitive groups may experience health effects. The general public is less likely to be affected.' };
   if (aqi === 4) return { name: 'Poor', colorClass: 'bg-red-500 text-white', advice: 'Some members of the general public may experience health effects; members of sensitive groups may experience more serious health effects.' };
   if (aqi === 5) return { name: 'Very Poor', colorClass: 'bg-purple-600 text-white', advice: 'Health alert: The risk of health effects is increased for everyone.' };
@@ -58,7 +58,7 @@ export function AirQualityModule({ currentAirPollution, forecastAirPollution, ti
         <CardHeader>
           <CardTitle className="flex items-center text-xl font-headline">
             <Wind size={22} className="mr-2 text-primary" />
-            Air Quality
+            Air Quality & Pollution Levels
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -86,11 +86,11 @@ export function AirQualityModule({ currentAirPollution, forecastAirPollution, ti
       <CardHeader>
         <CardTitle className="flex items-center text-xl font-headline">
           <Leaf size={22} className="mr-2 text-primary" />
-          Air Quality
+          Air Quality & Pollution Levels
         </CardTitle>
         {currentAirPollution && (
-          <CardDescription className={`inline-block px-3 py-1 text-sm font-semibold rounded-full ${aqiInfo.colorClass}`}>
-            Current AQI: {currentAirPollution.main.aqi} ({aqiInfo.name})
+          <CardDescription className={`inline-block px-3 py-1 text-sm font-semibold rounded-full ${aqiInfo.colorClass} mt-1`}>
+            Overall Air Quality: {currentAirPollution.main.aqi} ({aqiInfo.name})
           </CardDescription>
         )}
       </CardHeader>
@@ -134,16 +134,15 @@ export function AirQualityModule({ currentAirPollution, forecastAirPollution, ti
                   <XAxis 
                     dataKey="time" 
                     tickFormatter={(value, index) => {
-                        // Show date for the first tick of each new day
                         if (index === 0 || forecastChartData[index].date !== forecastChartData[index-1].date) {
                             return forecastChartData[index].date;
                         }
-                        return value; // Show time for other ticks
+                        return value;
                     }}
                     tick={{ fontSize: 10 }}
-                    interval="preserveStartEnd" // Show more labels
+                    interval="preserveStartEnd" 
                   />
-                  <YAxis tick={{ fontSize: 10 }} label={{ value: 'μg/m³', angle: -90, position: 'insideLeft', offset:0, style: {fontSize: '10px', fill: 'hsl(var(--muted-foreground))'} }} />
+                  <YAxis tick={{ fontSize: 10 }} label={{ value: 'Concentration (μg/m³)', angle: -90, position: 'insideLeft', offset:0, style: {fontSize: '10px', fill: 'hsl(var(--muted-foreground))'} }} />
                   <ShadTooltip 
                     cursor={true} 
                     content={
@@ -167,8 +166,8 @@ export function AirQualityModule({ currentAirPollution, forecastAirPollution, ti
                     } 
                   />
                   <ShadLegend content={<ShadLegendContent />} />
-                  {Object.keys(forecastChartConfig).filter(key => key !== 'co').map(key => ( // CO values are often much higher, skews chart
-                     (forecastChartData[0] as any)[key] !== undefined && // Check if pollutant exists in data
+                  {Object.keys(forecastChartConfig).filter(key => key !== 'co').map(key => (
+                     (forecastChartData[0] as any)[key] !== undefined && 
                         <Line 
                             key={key}
                             type="monotone" 
@@ -192,7 +191,7 @@ export function AirQualityModule({ currentAirPollution, forecastAirPollution, ti
           <div className="mt-6 p-4 border rounded-lg bg-background shadow">
             <h4 className="font-semibold text-md mb-2 flex items-center">
               <AlertCircle size={18} className="mr-2 text-primary" />
-              Health Advisory (Current AQI: {currentAirPollution.main.aqi} - {aqiInfo.name})
+              Health Advisory (Based on Overall Air Quality: {currentAirPollution.main.aqi} - {aqiInfo.name})
             </h4>
             <p className="text-sm text-muted-foreground">{aqiInfo.advice}</p>
           </div>
@@ -201,3 +200,4 @@ export function AirQualityModule({ currentAirPollution, forecastAirPollution, ti
     </Card>
   );
 }
+
