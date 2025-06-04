@@ -9,9 +9,12 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
   type ChartConfig,
 } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import React from 'react';
 
 interface AirPollutionDisplayProps {
   data: AirPollutionData | undefined;
@@ -50,13 +53,12 @@ const pollutantLabels: Record<keyof AirPollutionData['components'], string> = {
 };
 
 const pollutantChartConfig = {
-  value: { label: "Concentration (μg/m³)" },
   co: { label: "CO", color: "hsl(var(--chart-1))" },
   no: { label: "NO", color: "hsl(var(--chart-2))" },
   no2: { label: "NO₂", color: "hsl(var(--chart-3))" },
   o3: { label: "O₃", color: "hsl(var(--chart-4))" },
   so2: { label: "SO₂", color: "hsl(var(--chart-5))" },
-  pm2_5: { label: "PM₂.₅", color: "hsl(var(--chart-1))" },
+  pm2_5: { label: "PM₂.₅", color: "hsl(var(--chart-1))" }, // Re-using colors for more pollutants
   pm10: { label: "PM₁₀", color: "hsl(var(--chart-2))" },
   nh3: { label: "NH₃", color: "hsl(var(--chart-3))" },
 } satisfies ChartConfig;
@@ -83,13 +85,22 @@ export function AirPollutionDisplay({ data }: AirPollutionDisplayProps) {
   const aqiInfo = getAqiInfo(main?.aqi);
   const AqiIcon = aqiInfo.Icon;
 
-  const chartData = Object.entries(components)
-    .map(([key, value]) => ({
-      name: pollutantLabels[key as keyof typeof pollutantLabels] || key.toUpperCase(),
-      value: parseFloat(value?.toFixed(2) ?? "0"),
-      fill: pollutantChartConfig[key as keyof typeof pollutantChartConfig]?.color || "hsl(var(--chart-1))",
-    }))
-    .filter(item => item.value > 0);
+  const stackedChartData = React.useMemo(() => {
+    if (!components) return [];
+    // Ensure all pollutant keys from pollutantLabels are present, even if value is 0
+    const allPollutantKeys = Object.keys(pollutantLabels) as Array<keyof AirPollutionData['components']>;
+    const processedComponents = allPollutantKeys.reduce((acc, key) => {
+      acc[key] = parseFloat((components[key] ?? 0).toFixed(2));
+      return acc;
+    }, {} as Record<keyof AirPollutionData['components'], number>);
+
+    return [{
+      category: 'Pollutants', // Y-axis label for the single bar
+      ...processedComponents
+    }];
+  }, [components]);
+  
+  const hasPollutantDataForChart = components && Object.values(components).some(v => v > 0);
 
   return (
     <Card className="shadow-lg mt-6">
@@ -117,48 +128,41 @@ export function AirPollutionDisplay({ data }: AirPollutionDisplayProps) {
           ))}
         </div>
 
-        {chartData.length > 0 && (
+        {hasPollutantDataForChart && (
           <>
             <div className="flex items-center text-lg font-semibold mb-3 text-secondary-foreground">
               <BarChartHorizontalBig size={20} className="mr-2 text-primary" />
-              Pollutant Concentration Breakdown
+              Pollutant Composition (μg/m³)
             </div>
-            <ChartContainer config={pollutantChartConfig} className="h-[300px] w-full">
+            <ChartContainer config={pollutantChartConfig} className="h-[150px] w-full"> {/* Adjusted height for single stacked bar + legend */}
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   accessibilityLayer
-                  data={chartData}
-                  layout="horizontal" // Changed to horizontal
+                  data={stackedChartData}
+                  layout="horizontal"
                   margin={{
-                    left: 10, // Adjusted left margin for Y-axis labels
+                    left: 10,
                     right: 30,
                     top: 5,
-                    bottom: 5,
+                    bottom: 20, // Space for legend
                   }}
                 >
-                  <CartesianGrid horizontal={false} strokeDasharray="3 3" /> {/* vertical lines */}
-                  <XAxis 
-                    type="number" 
-                    dataKey="value" 
-                    tickLine={false} 
-                    axisLine={false} 
-                    tickMargin={8} 
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    width={60} // Ensure enough width for pollutant names
-                  />
-                  <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent indicator="dot" />}
-                  />
-                  <Bar dataKey="value" radius={4}>
-                    {/* Recharts' Bar component will automatically use the 'fill' property from the data objects */}
-                  </Bar>
+                  <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                  <XAxis type="number" tickLine={false} axisLine={false} tickMargin={8} />
+                  <YAxis type="category" dataKey="category" tickLine={false} axisLine={false} tickMargin={8} width={85} />
+                  <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+                  <ChartLegend content={<ChartLegendContent verticalAlign="bottom" />} />
+                  {Object.keys(pollutantLabels)
+                    .filter(key => components[key as keyof AirPollutionData['components']] > 0) // Only render bars for pollutants with data
+                    .map((key) => (
+                    <Bar
+                      key={key}
+                      dataKey={key} // e.g., "co", "pm2_5"
+                      stackId="pollutants" // All segments belong to the same stack
+                      name={pollutantLabels[key as keyof typeof pollutantLabels]} // For legend/tooltip e.g. "CO", "PM₂.₅"
+                      fill={pollutantChartConfig[key as keyof typeof pollutantChartConfig]?.color || "hsl(var(--chart-1))"}
+                    />
+                  ))}
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
@@ -168,3 +172,4 @@ export function AirPollutionDisplay({ data }: AirPollutionDisplayProps) {
     </Card>
   );
 }
+
