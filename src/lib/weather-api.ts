@@ -1,8 +1,7 @@
 
-import type { WeatherAPIResponse, ForecastDay, HourForecast, AstroForecast, DayForecast, AirPollutionDataEntry } from '@/types/weather';
+import type { WeatherAPIResponse, ForecastDay, HourForecast, AstroForecast, DayForecast } from '@/types/weather';
 
 const WEATHER_API_KEY = process.env.NEXT_PUBLIC_WEATHER_API_KEY;
-const AIR_POLLUTION_API_KEY = process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY;
 const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 function metersToKm(meters: number): number {
@@ -22,12 +21,6 @@ export async function fetchWeatherData(city: string): Promise<WeatherAPIResponse
 
   const currentWeatherUrl = `${OPENWEATHER_BASE_URL}/weather?q=${encodeURIComponent(city)}&appid=${WEATHER_API_KEY}&units=metric`;
   const forecastUrl = `${OPENWEATHER_BASE_URL}/forecast?q=${encodeURIComponent(city)}&appid=${WEATHER_API_KEY}&units=metric`;
-
-  let lat: number | null = null;
-  let lon: number | null = null;
-  let currentAirPollution: AirPollutionDataEntry | undefined = undefined;
-  let airPollutionForecastList: AirPollutionDataEntry[] | undefined = undefined;
-
 
   try {
     const [currentWeatherResponse, forecastResponse] = await Promise.all([
@@ -53,8 +46,6 @@ export async function fetchWeatherData(city: string): Promise<WeatherAPIResponse
       throw new Error(errorMessage);
     }
     const currentData = await currentWeatherResponse.json();
-    lat = currentData.coord.lat;
-    lon = currentData.coord.lon;
 
     if (!forecastResponse.ok) {
       let errorMessage = `Forecast API request failed with status ${forecastResponse.status}`;
@@ -74,66 +65,6 @@ export async function fetchWeatherData(city: string): Promise<WeatherAPIResponse
       throw new Error(errorMessage);
     }
     const forecastData = await forecastResponse.json();
-
-    // Fetch Air Pollution Data (Current and Forecast)
-    if (lat !== null && lon !== null) {
-      if (!AIR_POLLUTION_API_KEY) {
-        console.warn('Air Pollution API key is not configured. Skipping air pollution data. Please set NEXT_PUBLIC_AIR_POLLUTION_API_KEY.');
-      } else {
-        const currentAirPollutionUrl = `${OPENWEATHER_BASE_URL}/air_pollution?lat=${lat}&lon=${lon}&appid=${AIR_POLLUTION_API_KEY}`;
-        const forecastAirPollutionUrl = `${OPENWEATHER_BASE_URL}/air_pollution/forecast?lat=${lat}&lon=${lon}&appid=${AIR_POLLUTION_API_KEY}`;
-        
-        try {
-          const [currentAirPollutionResponse, forecastAirPollutionResponse] = await Promise.all([
-            fetch(currentAirPollutionUrl),
-            fetch(forecastAirPollutionUrl)
-          ]);
-
-          // Handle current air pollution
-          if (!currentAirPollutionResponse.ok) {
-            let pollutionErrorMessage = `Current air pollution API request failed: ${currentAirPollutionResponse.status}`;
-             try {
-                const errorData = await currentAirPollutionResponse.json();
-                if (errorData && errorData.message) {
-                    pollutionErrorMessage = `Current Air Pollution: ${errorData.message} (code ${errorData.cod})`;
-                    if (String(errorData.cod) === "401") {
-                        pollutionErrorMessage = `Invalid OpenWeatherMap API key for current air pollution: ${errorData.message}. Please ensure your NEXT_PUBLIC_AIR_POLLUTION_API_KEY in .env is correct.`;
-                    }
-                }
-            } catch (parseError) { /* ignore */ }
-            console.error(pollutionErrorMessage);
-          } else {
-            const pollutionJson = await currentAirPollutionResponse.json();
-            if (pollutionJson.list && pollutionJson.list.length > 0) {
-              currentAirPollution = pollutionJson.list[0] as AirPollutionDataEntry;
-            }
-          }
-
-          // Handle forecast air pollution
-           if (!forecastAirPollutionResponse.ok) {
-            let pollutionErrorMessage = `Forecast air pollution API request failed: ${forecastAirPollutionResponse.status}`;
-             try {
-                const errorData = await forecastAirPollutionResponse.json();
-                if (errorData && errorData.message) {
-                    pollutionErrorMessage = `Forecast Air Pollution: ${errorData.message} (code ${errorData.cod})`;
-                     if (String(errorData.cod) === "401") {
-                        pollutionErrorMessage = `Invalid OpenWeatherMap API key for forecast air pollution: ${errorData.message}. Please ensure your NEXT_PUBLIC_AIR_POLLUTION_API_KEY in .env is correct.`;
-                    }
-                }
-            } catch (parseError) { /* ignore */ }
-            console.error(pollutionErrorMessage);
-          } else {
-            const pollutionForecastJson = await forecastAirPollutionResponse.json();
-            if (pollutionForecastJson.list && pollutionForecastJson.list.length > 0) {
-              airPollutionForecastList = pollutionForecastJson.list as AirPollutionDataEntry[];
-            }
-          }
-
-        } catch (pollutionError: any) {
-          console.error("Error fetching air pollution data:", pollutionError.message);
-        }
-      }
-    }
 
     const timezoneOffsetSeconds = currentData.timezone;
     const locationEpoch = currentData.dt;
@@ -300,8 +231,6 @@ export async function fetchWeatherData(city: string): Promise<WeatherAPIResponse
       forecast: {
         forecastday: forecastDaysProcessed,
       },
-      airPollution: currentAirPollution,
-      airPollutionForecast: airPollutionForecastList,
     } as WeatherAPIResponse;
 
   } catch (networkOrThrownError: any) {
