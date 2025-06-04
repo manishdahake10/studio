@@ -56,7 +56,7 @@ const pollutantChartConfig = {
   no2: { label: "NO₂", color: "hsl(var(--chart-3))" },
   o3: { label: "O₃", color: "hsl(var(--chart-4))" },
   so2: { label: "SO₂", color: "hsl(var(--chart-5))" },
-  pm2_5: { label: "PM₂.₅", color: "hsl(var(--chart-1))" }, // Re-using colors
+  pm2_5: { label: "PM₂.₅", color: "hsl(var(--chart-1))" },
   pm10: { label: "PM₁₀", color: "hsl(var(--chart-2))" },
   nh3: { label: "NH₃", color: "hsl(var(--chart-3))" },
 } satisfies ChartConfig;
@@ -89,7 +89,7 @@ export function AirPollutionDisplay({ data }: AirPollutionDisplayProps) {
       value: parseFloat(value?.toFixed(2) ?? "0"),
       fill: pollutantChartConfig[key as keyof typeof pollutantChartConfig]?.color || "hsl(var(--chart-1))",
     }))
-    .filter(item => item.value > 0); // Only show pollutants with data
+    .filter(item => item.value > 0);
 
   return (
     <Card className="shadow-lg mt-6">
@@ -128,30 +128,35 @@ export function AirPollutionDisplay({ data }: AirPollutionDisplayProps) {
                 <BarChart
                   accessibilityLayer
                   data={chartData}
-                  layout="vertical"
+                  layout="horizontal" // Changed to horizontal
                   margin={{
-                    left: 10,
+                    left: 10, // Adjusted left margin for Y-axis labels
                     right: 30,
                     top: 5,
                     bottom: 5,
                   }}
                 >
-                  <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-                  <XAxis type="number" dataKey="value" tickLine={false} axisLine={false} tickMargin={8} />
+                  <CartesianGrid horizontal={false} strokeDasharray="3 3" /> {/* vertical lines */}
+                  <XAxis 
+                    type="number" 
+                    dataKey="value" 
+                    tickLine={false} 
+                    axisLine={false} 
+                    tickMargin={8} 
+                  />
                   <YAxis
                     type="category"
                     dataKey="name"
                     tickLine={false}
                     axisLine={false}
                     tickMargin={8}
-                    width={60}
+                    width={60} // Ensure enough width for pollutant names
                   />
                   <ChartTooltip
                     cursor={false}
                     content={<ChartTooltipContent indicator="dot" />}
                   />
                   <Bar dataKey="value" radius={4}>
-                    {/* This allows each bar to have its own color based on `fill` in chartData */}
                     {/* Recharts' Bar component will automatically use the 'fill' property from the data objects */}
                   </Bar>
                 </BarChart>
