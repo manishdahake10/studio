@@ -120,10 +120,41 @@ export interface ForecastDay {
   hour: HourForecast[];
 }
 
+// Air Pollution Types
+export interface AQIComponents {
+  co: number; // Carbon monoxide
+  no: number; // Nitrogen monoxide
+  no2: number; // Nitrogen dioxide
+  o3: number; // Ozone
+  so2: number; // Sulphur dioxide
+  pm2_5: number; // Fine particles matter
+  pm10: number; // Coarse particulate matter
+  nh3: number; // Ammonia
+}
+
+export interface AirPollutionDataEntry {
+  dt: number; // Date and time, Unix, UTC
+  main: {
+    aqi: 1 | 2 | 3 | 4 | 5; // Air Quality Index (1=Good, 2=Fair, 3=Moderate, 4=Poor, 5=Very Poor)
+  };
+  components: AQIComponents;
+}
+
+export interface AirPollutionResponse {
+  coord: {
+    lon: number;
+    lat: number;
+  };
+  list: AirPollutionDataEntry[];
+}
+
+
 export interface WeatherAPIResponse {
   location: WeatherLocation;
   current: CurrentWeatherData;
   forecast?: {
     forecastday: ForecastDay[];
   };
+  airPollution?: AirPollutionDataEntry; // Current air pollution
+  airPollutionForecast?: AirPollutionDataEntry[]; // Hourly forecast for air pollution
 }
