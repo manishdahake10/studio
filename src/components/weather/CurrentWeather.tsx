@@ -26,7 +26,7 @@ export function CurrentWeather({ data }: CurrentWeatherProps) {
           <div className="flex items-center">
             {current.condition.icon && (
               <Image 
-                src={`https:${current.condition.icon}`} 
+                src={current.condition.icon} 
                 alt={current.condition.text} 
                 width={80} 
                 height={80}

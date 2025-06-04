@@ -18,16 +18,16 @@ export function ForecastDisplay({ forecastDays }: ForecastDisplayProps) {
           <Card key={dayData.date_epoch} className="flex flex-col items-center text-center shadow-md hover:shadow-lg transition-shadow duration-200">
             <CardHeader className="pb-2">
               <CardTitle className="text-md font-medium">
-                {new Date(dayData.date_epoch * 1000).toLocaleDateString('en-US', { weekday: 'short' })}
+                {new Date(dayData.date_epoch * 1000).toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })}
               </CardTitle>
               <p className="text-xs text-muted-foreground">
-                {new Date(dayData.date_epoch * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                {new Date(dayData.date_epoch * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}
               </p>
             </CardHeader>
             <CardContent className="flex flex-col items-center flex-grow justify-center p-3 pt-0">
               {dayData.day.condition.icon && (
                 <Image
-                  src={`https:${dayData.day.condition.icon}`}
+                  src={dayData.day.condition.icon}
                   alt={dayData.day.condition.text}
                   width={48}
                   height={48}
