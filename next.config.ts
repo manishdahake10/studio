@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -18,9 +19,15 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'cdn.weatherapi.com',
+        hostname: 'cdn.weatherapi.com', // Kept in case of future switch
         port: '',
         pathname: '/weather/64x64/**',
+      },
+      { 
+        protocol: 'https',
+        hostname: 'openweathermap.org', // Added for OpenWeatherMap icons
+        port: '',
+        pathname: '/img/wn/**',
       }
     ],
   },
