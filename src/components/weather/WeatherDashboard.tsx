@@ -7,7 +7,6 @@ import { CurrentWeather } from './CurrentWeather';
 import { ForecastDisplay } from './ForecastDisplay';
 import { WeatherSummary } from './WeatherSummary';
 import { ForecastCharts } from './ForecastCharts';
-import { GeothermalMap } from '@/components/maps/GeothermalMap'; // Import the new map component
 import { fetchWeatherData } from '@/lib/weather-api';
 import type { WeatherAPIResponse } from '@/types/weather';
 import { useToast } from "@/hooks/use-toast";
@@ -63,7 +62,6 @@ export function WeatherDashboard() {
       <ForecastSkeleton />
       <ChartsSkeleton /> 
       <SummarySkeleton />
-      <MapSkeleton />
     </div>
   );
 
@@ -125,14 +123,6 @@ export function WeatherDashboard() {
     </div>
   );
 
-  const MapSkeleton = () => (
-    <div className="mt-6 p-6 border rounded-lg shadow-sm">
-      <Skeleton className="h-6 w-1/2 mb-4" />
-      <Skeleton className="h-[400px] md:h-[500px] w-full" />
-    </div>
-  );
-
-
   return (
     <div className="container mx-auto px-4 py-8 flex-grow">
       <CitySearch onSearch={handleSearch} initialCity={city} isLoading={isLoading} />
@@ -163,7 +153,6 @@ export function WeatherDashboard() {
           <ForecastDisplay forecastDays={weatherData.forecast?.forecastday} />
           <ForecastCharts forecastDays={weatherData.forecast?.forecastday} />
           <WeatherSummary weatherData={weatherData} />
-          <GeothermalMap />
         </div>
       )}
     </div>
