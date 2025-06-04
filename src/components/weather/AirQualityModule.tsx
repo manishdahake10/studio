@@ -36,15 +36,15 @@ const forecastChartConfig = {
   pm2_5: { label: "PM₂.₅", color: "hsl(var(--chart-1))" },
   pm10: { label: "PM₁₀", color: "hsl(var(--chart-2))" },
   o3: { label: "O₃", color: "hsl(var(--chart-3))" },
-  no2: { label: "NO₂", color: "hsl(var(--chart-4))" },
-  so2: { label: "SO₂", color: "hsl(var(--chart-5))" },
-  co: { label: "CO", color: "hsl(var(--chart-1))" }, // Re-using chart colors for additional pollutants
+  no2: { label: "NO₂", color: "hsl(var(--chart-4))" }, // Kept for tooltip data if needed
+  so2: { label: "SO₂", color: "hsl(var(--chart-5))" }, // Kept for tooltip data if needed
+  co: { label: "CO", color: "hsl(var(--chart-1))" },   // Kept for tooltip data if needed
 } satisfies ChartConfig;
 
 
 const getAQICategory = (aqi: number): { name: string; colorClass: string; advice: string } => {
   if (aqi === 1) return { name: 'Good', colorClass: 'bg-green-500 text-white', advice: 'Air quality is satisfactory, and air pollution poses little or no risk.' };
-  if (aqi === 2) return { name: 'Fair', colorClass: 'bg-yellow-400 text-black', advice: 'Air quality is acceptable. However, sensitive individuals may experience minor health effects.' };
+  if (aqi === 2) return { name: 'Fair', colorClass: 'bg-yellow-400 text-black', advice: 'Air quality is acceptable. However, very sensitive individuals may experience minor health effects.' };
   if (aqi === 3) return { name: 'Moderate', colorClass: 'bg-orange-500 text-white', advice: 'Members of sensitive groups may experience health effects. The general public is less likely to be affected.' };
   if (aqi === 4) return { name: 'Poor', colorClass: 'bg-red-500 text-white', advice: 'Some members of the general public may experience health effects; members of sensitive groups may experience more serious health effects.' };
   if (aqi === 5) return { name: 'Very Poor', colorClass: 'bg-purple-600 text-white', advice: 'Health alert: The risk of health effects is increased for everyone.' };
@@ -80,6 +80,8 @@ export function AirQualityModule({ currentAirPollution, forecastAirPollution, ti
       ...entry.components,
     };
   });
+
+  const pollutantsToDisplayInChart: (keyof typeof forecastChartConfig)[] = ['pm2_5', 'pm10', 'o3'];
 
   return (
     <Card className="mt-6 shadow-lg">
@@ -131,23 +133,23 @@ export function AirQualityModule({ currentAirPollution, forecastAirPollution, ti
                 <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={forecastChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis 
-                    dataKey="time" 
+                  <XAxis
+                    dataKey="time"
                     tickFormatter={(value, index) => {
-                        if (index === 0 || forecastChartData[index].date !== forecastChartData[index-1].date) {
+                        if (forecastChartData && forecastChartData[index] && (index === 0 || forecastChartData[index].date !== forecastChartData[index-1].date)) {
                             return forecastChartData[index].date;
                         }
                         return value;
                     }}
                     tick={{ fontSize: 10 }}
-                    interval="preserveStartEnd" 
+                    interval="preserveStartEnd"
                   />
                   <YAxis tick={{ fontSize: 10 }} label={{ value: 'Concentration (μg/m³)', angle: -90, position: 'insideLeft', offset:0, style: {fontSize: '10px', fill: 'hsl(var(--muted-foreground))'} }} />
-                  <ShadTooltip 
-                    cursor={true} 
+                  <ShadTooltip
+                    cursor={true}
                     content={
-                      <ShadTooltipContent 
-                        indicator="line" 
+                      <ShadTooltipContent
+                        indicator="line"
                         labelFormatter={(value, payload) => {
                            if (payload && payload.length > 0 && payload[0].payload) {
                                 const entry = payload[0].payload as typeof forecastChartData[0];
@@ -163,21 +165,26 @@ export function AirQualityModule({ currentAirPollution, forecastAirPollution, ti
                           </>
                         )}
                       />
-                    } 
+                    }
                   />
                   <ShadLegend content={<ShadLegendContent />} />
-                  {Object.keys(forecastChartConfig).filter(key => key !== 'co').map(key => (
-                     (forecastChartData[0] as any)[key] !== undefined && 
-                        <Line 
+                  {pollutantsToDisplayInChart.map(key => {
+                    // Check if dataKey exists in the first entry of forecastChartData to prevent rendering empty lines
+                    if (forecastChartData && forecastChartData.length > 0 && forecastChartData[0][key as keyof typeof forecastChartData[0]] !== undefined) {
+                      return (
+                        <Line
                             key={key}
-                            type="monotone" 
-                            dataKey={key} 
-                            stroke={forecastChartConfig[key as keyof typeof forecastChartConfig].color} 
-                            strokeWidth={2} 
-                            dot={false} 
-                            name={forecastChartConfig[key as keyof typeof forecastChartConfig].label}
+                            type="monotone"
+                            dataKey={key}
+                            stroke={forecastChartConfig[key].color}
+                            strokeWidth={2}
+                            dot={false}
+                            name={forecastChartConfig[key].label}
                         />
-                  ))}
+                      );
+                    }
+                    return null;
+                  })}
                 </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
