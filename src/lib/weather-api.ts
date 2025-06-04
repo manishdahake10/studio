@@ -1,7 +1,8 @@
 
-import type { WeatherAPIResponse, ForecastDay, HourForecast, AstroForecast, DayForecast } from '@/types/weather';
+import type { WeatherAPIResponse, ForecastDay, HourForecast, AstroForecast, DayForecast, AirPollutionData } from '@/types/weather';
 
-const API_KEY = process.env.NEXT_PUBLIC_WEATHER_API_KEY;
+const WEATHER_API_KEY = process.env.NEXT_PUBLIC_WEATHER_API_KEY;
+const AIR_POLLUTION_API_KEY = process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY;
 const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 function metersToKm(meters: number): number {
@@ -15,12 +16,16 @@ function getWindDirection(degrees: number): string {
 
 
 export async function fetchWeatherData(city: string): Promise<WeatherAPIResponse> {
-  if (!API_KEY) {
+  if (!WEATHER_API_KEY) {
     throw new Error('Weather API key is not configured. Please set the NEXT_PUBLIC_WEATHER_API_KEY environment variable in your .env or .env.local file.');
   }
 
-  const currentWeatherUrl = `${OPENWEATHER_BASE_URL}/weather?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric`;
-  const forecastUrl = `${OPENWEATHER_BASE_URL}/forecast?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric`;
+  const currentWeatherUrl = `${OPENWEATHER_BASE_URL}/weather?q=${encodeURIComponent(city)}&appid=${WEATHER_API_KEY}&units=metric`;
+  const forecastUrl = `${OPENWEATHER_BASE_URL}/forecast?q=${encodeURIComponent(city)}&appid=${WEATHER_API_KEY}&units=metric`;
+
+  let lat: number | null = null;
+  let lon: number | null = null;
+  let airPollutionData: AirPollutionData | undefined = undefined;
 
   try {
     const [currentWeatherResponse, forecastResponse] = await Promise.all([
@@ -46,6 +51,8 @@ export async function fetchWeatherData(city: string): Promise<WeatherAPIResponse
       throw new Error(errorMessage);
     }
     const currentData = await currentWeatherResponse.json();
+    lat = currentData.coord.lat;
+    lon = currentData.coord.lon;
 
     if (!forecastResponse.ok) {
       let errorMessage = `Forecast API request failed with status ${forecastResponse.status}`;
@@ -65,6 +72,39 @@ export async function fetchWeatherData(city: string): Promise<WeatherAPIResponse
       throw new Error(errorMessage);
     }
     const forecastData = await forecastResponse.json();
+
+    // Fetch Air Pollution Data
+    if (lat !== null && lon !== null) {
+      if (!AIR_POLLUTION_API_KEY) {
+        console.warn('Air Pollution API key is not configured. Skipping air pollution data. Please set NEXT_PUBLIC_AIR_POLLUTION_API_KEY.');
+      } else {
+        const airPollutionUrl = `${OPENWEATHER_BASE_URL}/air_pollution?lat=${lat}&lon=${lon}&appid=${AIR_POLLUTION_API_KEY}`;
+        try {
+          const airPollutionResponse = await fetch(airPollutionUrl);
+          if (!airPollutionResponse.ok) {
+            let pollutionErrorMessage = `Air pollution API request failed: ${airPollutionResponse.status}`;
+            try {
+                const errorData = await airPollutionResponse.json();
+                if (errorData && errorData.message) {
+                    pollutionErrorMessage = `Air Pollution: ${errorData.message} (code ${errorData.cod})`;
+                    if (String(errorData.cod) === "401") {
+                        pollutionErrorMessage = `Invalid OpenWeatherMap API key for air pollution: ${errorData.message}. Please ensure your NEXT_PUBLIC_AIR_POLLUTION_API_KEY in .env is correct.`;
+                    }
+                }
+            } catch (parseError) { /* ignore */ }
+            console.error(pollutionErrorMessage);
+            // Do not throw error here, weather data can still be shown
+          } else {
+            const pollutionJson = await airPollutionResponse.json();
+            if (pollutionJson.list && pollutionJson.list.length > 0) {
+              airPollutionData = pollutionJson.list[0] as AirPollutionData;
+            }
+          }
+        } catch (pollutionError: any) {
+          console.error("Error fetching air pollution data:", pollutionError.message);
+        }
+      }
+    }
 
     const timezoneOffsetSeconds = currentData.timezone;
     const locationEpoch = currentData.dt;
@@ -144,7 +184,7 @@ export async function fetchWeatherData(city: string): Promise<WeatherAPIResponse
           maxwind_mph: Math.round(Math.max(...dayEntries.map(e => e.wind.speed)) * 2.23694),
           totalprecip_mm: parseFloat(dayEntries.reduce((sum, e) => sum + (e.rain?.['3h'] || 0), 0).toFixed(1)),
           totalprecip_in: parseFloat((dayEntries.reduce((sum, e) => sum + (e.rain?.['3h'] || 0), 0) / 25.4).toFixed(2)),
-          totalsnow_cm: parseFloat(dayEntries.reduce((sum, e) => sum + (e.snow?.['3h'] || 0), 0).toFixed(1)), // Assuming snow is in mm from OWM, converting to cm
+          totalsnow_cm: parseFloat(dayEntries.reduce((sum, e) => sum + (e.snow?.['3h'] || 0), 0).toFixed(1)), 
           avgvis_km: metersToKm(dayEntries.reduce((sum, e) => sum + (e.visibility || 10000), 0) / dayEntries.length),
           avgvis_miles: parseFloat((metersToKm(dayEntries.reduce((sum, e) => sum + (e.visibility || 10000), 0) / dayEntries.length) * 0.621371).toFixed(1)),
           avghumidity: Math.round(dayEntries.reduce((sum, e) => sum + e.main.humidity, 0) / dayEntries.length),
@@ -198,10 +238,10 @@ export async function fetchWeatherData(city: string): Promise<WeatherAPIResponse
           cloud: item.clouds.all,
           feelslike_c: Math.round(item.main.feels_like),
           feelslike_f: Math.round(item.main.feels_like * 9/5 + 32),
-          windchill_c: Math.round(item.main.temp_min), // Approximation
-          windchill_f: Math.round(item.main.temp_min * 9/5 + 32), // Approximation
-          heatindex_c: Math.round(item.main.temp_max), // Approximation
-          heatindex_f: Math.round(item.main.temp_max * 9/5 + 32), // Approximation
+          windchill_c: Math.round(item.main.temp_min), 
+          windchill_f: Math.round(item.main.temp_min * 9/5 + 32), 
+          heatindex_c: Math.round(item.main.temp_max), 
+          heatindex_f: Math.round(item.main.temp_max * 9/5 + 32), 
           dewpoint_c: 0, 
           dewpoint_f: 0, 
           will_it_rain: (item.pop && item.pop > 0) ? 1 : 0,
@@ -231,6 +271,7 @@ export async function fetchWeatherData(city: string): Promise<WeatherAPIResponse
       forecast: {
         forecastday: forecastDaysProcessed,
       },
+      airPollution: airPollutionData,
     } as WeatherAPIResponse;
 
   } catch (networkOrThrownError: any) {

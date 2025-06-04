@@ -1,3 +1,4 @@
+
 export interface WeatherLocation {
   name: string;
   region: string;
@@ -119,10 +120,30 @@ export interface ForecastDay {
   hour: HourForecast[];
 }
 
+export interface AQIComponents {
+  co: number; // Carbon monoxide, μg/m3
+  no: number; // Nitrogen monoxide, μg/m3
+  no2: number; // Nitrogen dioxide, μg/m3
+  o3: number; // Ozone, μg/m3
+  so2: number; // Sulphur dioxide, μg/m3
+  pm2_5: number; // Fine particles matter, μg/m3
+  pm10: number; // Coarse particulate matter, μg/m3
+  nh3: number; // Ammonia, μg/m3
+}
+
+export interface AirPollutionData {
+  dt: number; // Date and time, Unix, UTC
+  main: {
+    aqi: number; // Air Quality Index. Possible values: 1, 2, 3, 4, 5. Where 1 = Good, 2 = Fair, 3 = Moderate, 4 = Poor, 5 = Very Poor.
+  };
+  components: AQIComponents;
+}
+
 export interface WeatherAPIResponse {
   location: WeatherLocation;
   current: CurrentWeatherData;
   forecast?: {
     forecastday: ForecastDay[];
   };
+  airPollution?: AirPollutionData;
 }

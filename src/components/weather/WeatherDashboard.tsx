@@ -7,6 +7,7 @@ import { CurrentWeather } from './CurrentWeather';
 import { ForecastDisplay } from './ForecastDisplay';
 import { WeatherSummary } from './WeatherSummary';
 import { ForecastCharts } from './ForecastCharts';
+import { AirPollutionDisplay } from './AirPollutionDisplay'; // New Import
 import { fetchWeatherData } from '@/lib/weather-api';
 import type { WeatherAPIResponse } from '@/types/weather';
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +40,20 @@ export function WeatherDashboard() {
       setWeatherData(data);
       setCity(data.location.name); 
       localStorage.setItem(LAST_CITY_KEY, data.location.name);
+      if (!data.airPollution && process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY) {
+        toast({
+            title: "Air Pollution Data",
+            description: "Air pollution data might be unavailable for this location, or there was an issue fetching it. The API key seems to be set.",
+            variant: "default",
+        });
+      } else if (!data.airPollution && !process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY) {
+         toast({
+            title: "Air Pollution API Key Missing",
+            description: "NEXT_PUBLIC_AIR_POLLUTION_API_KEY is not set in .env. Air pollution data cannot be fetched.",
+            variant: "destructive",
+        });
+      }
+
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred.');
       toast({
@@ -59,6 +74,7 @@ export function WeatherDashboard() {
   const WeatherSkeleton = () => (
     <div className="space-y-6">
       <CardSkeleton />
+      <AirPollutionSkeleton />
       <ForecastSkeleton />
       <ChartsSkeleton /> 
       <SummarySkeleton />
@@ -80,6 +96,16 @@ export function WeatherDashboard() {
         <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm w-full sm:w-auto">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-5 w-32" />)}
         </div>
+      </div>
+    </div>
+  );
+  
+  const AirPollutionSkeleton = () => (
+    <div className="p-6 border rounded-lg shadow-sm mt-6">
+      <Skeleton className="h-7 w-1/3 mb-3" />
+      <Skeleton className="h-6 w-1/4 mb-4" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-5 w-full" />)}
       </div>
     </div>
   );
@@ -130,14 +156,24 @@ export function WeatherDashboard() {
       {error && !process.env.NEXT_PUBLIC_WEATHER_API_KEY && (
         <Alert variant="destructive" className="my-4">
           <Terminal className="h-4 w-4" />
-          <AlertTitle>API Key Missing</AlertTitle>
+          <AlertTitle>Weather API Key Missing</AlertTitle>
           <AlertDescription>
-            The OpenWeatherMap API key is not configured. Please set the NEXT_PUBLIC_WEATHER_API_KEY environment variable in your .env file.
+            The OpenWeatherMap API key for weather (NEXT_PUBLIC_WEATHER_API_KEY) is not configured. Please set it in your .env file.
+          </AlertDescription>
+        </Alert>
+      )}
+      {error && !process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY && (
+         <Alert variant="destructive" className="my-4">
+          <Terminal className="h-4 w-4" />
+          <AlertTitle>Air Pollution API Key Missing</AlertTitle>
+          <AlertDescription>
+            The OpenWeatherMap API key for air pollution (NEXT_PUBLIC_AIR_POLLUTION_API_KEY) is not configured. Please set it in your .env file. Air pollution data cannot be shown.
           </AlertDescription>
         </Alert>
       )}
 
-      {error && process.env.NEXT_PUBLIC_WEATHER_API_KEY &&(
+
+      {error && process.env.NEXT_PUBLIC_WEATHER_API_KEY && (
          <Alert variant="destructive" className="my-4">
           <Terminal className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
@@ -150,6 +186,25 @@ export function WeatherDashboard() {
       {!isLoading && weatherData && (
         <div className="space-y-6">
           <CurrentWeather data={weatherData} />
+          {weatherData.airPollution && <AirPollutionDisplay data={weatherData.airPollution} />}
+          {(!weatherData.airPollution && !process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY) && (
+             <Alert variant="default" className="my-4">
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Air Pollution API Key Missing</AlertTitle>
+                <AlertDescription>
+                  The NEXT_PUBLIC_AIR_POLLUTION_API_KEY is not set in your .env file. Air pollution data cannot be displayed.
+                </AlertDescription>
+            </Alert>
+          )}
+           {(!weatherData.airPollution && process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY && !error?.toLowerCase().includes('air pollution')) && (
+             <Alert variant="default" className="my-4">
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Air Pollution Data Unavailable</AlertTitle>
+                <AlertDescription>
+                  Air pollution data is currently unavailable for {weatherData.location.name} or there was an issue fetching it.
+                </AlertDescription>
+            </Alert>
+          )}
           <ForecastDisplay forecastDays={weatherData.forecast?.forecastday} />
           <ForecastCharts forecastDays={weatherData.forecast?.forecastday} />
           <WeatherSummary weatherData={weatherData} />
