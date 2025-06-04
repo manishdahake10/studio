@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -5,6 +6,7 @@ import { CitySearch } from './CitySearch';
 import { CurrentWeather } from './CurrentWeather';
 import { ForecastDisplay } from './ForecastDisplay';
 import { WeatherSummary } from './WeatherSummary';
+import { ForecastCharts } from './ForecastCharts'; // Import the new component
 import { fetchWeatherData } from '@/lib/weather-api';
 import type { WeatherAPIResponse } from '@/types/weather';
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +60,7 @@ export function WeatherDashboard() {
     <div className="space-y-6">
       <CardSkeleton />
       <ForecastSkeleton />
+      <ChartsSkeleton /> 
       <SummarySkeleton />
     </div>
   );
@@ -97,6 +100,19 @@ export function WeatherDashboard() {
       </div>
     </div>
   );
+
+  const ChartsSkeleton = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+      <div className="p-6 border rounded-lg shadow-sm">
+        <Skeleton className="h-6 w-1/2 mb-4" />
+        <Skeleton className="h-[250px] w-full" />
+      </div>
+      <div className="p-6 border rounded-lg shadow-sm">
+        <Skeleton className="h-6 w-1/2 mb-4" />
+        <Skeleton className="h-[250px] w-full" />
+      </div>
+    </div>
+  );
   
   const SummarySkeleton = () => (
     <div className="mt-6 p-6 border rounded-lg shadow-sm">
@@ -117,7 +133,7 @@ export function WeatherDashboard() {
           <Terminal className="h-4 w-4" />
           <AlertTitle>API Key Missing</AlertTitle>
           <AlertDescription>
-            The WeatherAPI key is not configured. Please set the NEXT_PUBLIC_WEATHER_API_KEY environment variable in your .env.local file.
+            The OpenWeatherMap API key is not configured. Please set the NEXT_PUBLIC_WEATHER_API_KEY environment variable in your .env file.
           </AlertDescription>
         </Alert>
       )}
@@ -136,6 +152,7 @@ export function WeatherDashboard() {
         <div className="space-y-6">
           <CurrentWeather data={weatherData} />
           <ForecastDisplay forecastDays={weatherData.forecast?.forecastday} />
+          <ForecastCharts forecastDays={weatherData.forecast?.forecastday} />
           <WeatherSummary weatherData={weatherData} />
         </div>
       )}
