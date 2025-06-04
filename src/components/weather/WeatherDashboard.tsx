@@ -6,7 +6,8 @@ import { CitySearch } from './CitySearch';
 import { CurrentWeather } from './CurrentWeather';
 import { ForecastDisplay } from './ForecastDisplay';
 import { WeatherSummary } from './WeatherSummary';
-import { ForecastCharts } from './ForecastCharts'; // Import the new component
+import { ForecastCharts } from './ForecastCharts';
+import { GeothermalMap } from '@/components/maps/GeothermalMap'; // Import the new map component
 import { fetchWeatherData } from '@/lib/weather-api';
 import type { WeatherAPIResponse } from '@/types/weather';
 import { useToast } from "@/hooks/use-toast";
@@ -29,7 +30,7 @@ export function WeatherDashboard() {
     setCity(lastSearchedCity);
     loadWeatherData(lastSearchedCity);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Load initial data on mount
+  }, []); 
 
   const loadWeatherData = useCallback(async (cityName: string) => {
     setIsLoading(true);
@@ -37,7 +38,7 @@ export function WeatherDashboard() {
     try {
       const data = await fetchWeatherData(cityName);
       setWeatherData(data);
-      setCity(data.location.name); // Update city name from API response
+      setCity(data.location.name); 
       localStorage.setItem(LAST_CITY_KEY, data.location.name);
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred.');
@@ -46,7 +47,7 @@ export function WeatherDashboard() {
         description: err.message || 'Could not fetch weather data. Please try another city or check your API key.',
         variant: "destructive",
       });
-      setWeatherData(null); // Clear old data on error
+      setWeatherData(null); 
     } finally {
       setIsLoading(false);
     }
@@ -62,6 +63,7 @@ export function WeatherDashboard() {
       <ForecastSkeleton />
       <ChartsSkeleton /> 
       <SummarySkeleton />
+      <MapSkeleton />
     </div>
   );
 
@@ -123,6 +125,13 @@ export function WeatherDashboard() {
     </div>
   );
 
+  const MapSkeleton = () => (
+    <div className="mt-6 p-6 border rounded-lg shadow-sm">
+      <Skeleton className="h-6 w-1/2 mb-4" />
+      <Skeleton className="h-[400px] md:h-[500px] w-full" />
+    </div>
+  );
+
 
   return (
     <div className="container mx-auto px-4 py-8 flex-grow">
@@ -154,6 +163,7 @@ export function WeatherDashboard() {
           <ForecastDisplay forecastDays={weatherData.forecast?.forecastday} />
           <ForecastCharts forecastDays={weatherData.forecast?.forecastday} />
           <WeatherSummary weatherData={weatherData} />
+          <GeothermalMap />
         </div>
       )}
     </div>
