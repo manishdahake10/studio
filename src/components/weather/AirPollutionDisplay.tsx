@@ -4,7 +4,14 @@
 import type { AirPollutionData } from '@/types/weather';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CloudFog, Wind, Leaf, AlertTriangle, Skull } from 'lucide-react';
+import { CloudFog, Wind, Leaf, AlertTriangle, Skull, BarChartHorizontalBig } from 'lucide-react';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
 
 interface AirPollutionDisplayProps {
   data: AirPollutionData | undefined;
@@ -23,13 +30,36 @@ const getAqiInfo = (aqi: number | undefined): { text: string; color: 'green' | '
 };
 
 const badgeVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  green: 'default', // Using primary for good
-  yellow: 'secondary', // Muted yellow/orange for fair
-  orange: 'default', // Potentially use a custom orange or keep primary
+  green: 'default',
+  yellow: 'secondary',
+  orange: 'default',
   red: 'destructive',
-  purple: 'destructive', // Darker destructive for very poor
+  purple: 'destructive',
   gray: 'outline',
 };
+
+const pollutantLabels: Record<keyof AirPollutionData['components'], string> = {
+  co: "CO",
+  no: "NO",
+  no2: "NO₂",
+  o3: "O₃",
+  so2: "SO₂",
+  pm2_5: "PM₂.₅",
+  pm10: "PM₁₀",
+  nh3: "NH₃",
+};
+
+const pollutantChartConfig = {
+  value: { label: "Concentration (μg/m³)" },
+  co: { label: "CO", color: "hsl(var(--chart-1))" },
+  no: { label: "NO", color: "hsl(var(--chart-2))" },
+  no2: { label: "NO₂", color: "hsl(var(--chart-3))" },
+  o3: { label: "O₃", color: "hsl(var(--chart-4))" },
+  so2: { label: "SO₂", color: "hsl(var(--chart-5))" },
+  pm2_5: { label: "PM₂.₅", color: "hsl(var(--chart-1))" }, // Re-using colors
+  pm10: { label: "PM₁₀", color: "hsl(var(--chart-2))" },
+  nh3: { label: "NH₃", color: "hsl(var(--chart-3))" },
+} satisfies ChartConfig;
 
 
 export function AirPollutionDisplay({ data }: AirPollutionDisplayProps) {
@@ -53,6 +83,14 @@ export function AirPollutionDisplay({ data }: AirPollutionDisplayProps) {
   const aqiInfo = getAqiInfo(main?.aqi);
   const AqiIcon = aqiInfo.Icon;
 
+  const chartData = Object.entries(components)
+    .map(([key, value]) => ({
+      name: pollutantLabels[key as keyof typeof pollutantLabels] || key.toUpperCase(),
+      value: parseFloat(value?.toFixed(2) ?? "0"),
+      fill: pollutantChartConfig[key as keyof typeof pollutantChartConfig]?.color || "hsl(var(--chart-1))",
+    }))
+    .filter(item => item.value > 0); // Only show pollutants with data
+
   return (
     <Card className="shadow-lg mt-6">
       <CardHeader className="pb-3">
@@ -73,16 +111,54 @@ export function AirPollutionDisplay({ data }: AirPollutionDisplayProps) {
       </CardHeader>
       <CardContent>
         <p className="text-sm mb-3 text-muted-foreground">Pollutant Levels (μg/m³):</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-2 text-sm">
-          <div><span className="font-medium">CO:</span> {components.co?.toFixed(2) || 'N/A'}</div>
-          <div><span className="font-medium">NO:</span> {components.no?.toFixed(2) || 'N/A'}</div>
-          <div><span className="font-medium">NO₂:</span> {components.no2?.toFixed(2) || 'N/A'}</div>
-          <div><span className="font-medium">O₃:</span> {components.o3?.toFixed(2) || 'N/A'}</div>
-          <div><span className="font-medium">SO₂:</span> {components.so2?.toFixed(2) || 'N/A'}</div>
-          <div><span className="font-medium">PM₂₅:</span> {components.pm2_5?.toFixed(2) || 'N/A'}</div>
-          <div><span className="font-medium">PM₁₀:</span> {components.pm10?.toFixed(2) || 'N/A'}</div>
-          <div><span className="font-medium">NH₃:</span> {components.nh3?.toFixed(2) || 'N/A'}</div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-2 text-sm mb-6">
+          {Object.entries(pollutantLabels).map(([key, label]) => (
+            <div key={key}><span className="font-medium">{label}:</span> {components[key as keyof typeof components]?.toFixed(2) || 'N/A'}</div>
+          ))}
         </div>
+
+        {chartData.length > 0 && (
+          <>
+            <div className="flex items-center text-lg font-semibold mb-3 text-secondary-foreground">
+              <BarChartHorizontalBig size={20} className="mr-2 text-primary" />
+              Pollutant Concentration Breakdown
+            </div>
+            <ChartContainer config={pollutantChartConfig} className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  accessibilityLayer
+                  data={chartData}
+                  layout="vertical"
+                  margin={{
+                    left: 10,
+                    right: 30,
+                    top: 5,
+                    bottom: 5,
+                  }}
+                >
+                  <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                  <XAxis type="number" dataKey="value" tickLine={false} axisLine={false} tickMargin={8} />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    width={60}
+                  />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent indicator="dot" />}
+                  />
+                  <Bar dataKey="value" radius={4}>
+                    {/* This allows each bar to have its own color based on `fill` in chartData */}
+                    {/* Recharts' Bar component will automatically use the 'fill' property from the data objects */}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </>
+        )}
       </CardContent>
     </Card>
   );
