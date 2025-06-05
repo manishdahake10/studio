@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
@@ -13,6 +14,13 @@ interface CitySearchProps {
 
 export function CitySearch({ onSearch, initialCity = '', isLoading }: CitySearchProps) {
   const [city, setCity] = useState(initialCity);
+
+  useEffect(() => {
+    // Update the internal city state if the initialCity prop changes
+    // This is important for when WeatherDashboard loads the city from localStorage
+    // after CitySearch has already mounted.
+    setCity(initialCity);
+  }, [initialCity]);
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
