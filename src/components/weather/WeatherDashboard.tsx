@@ -6,12 +6,13 @@ import { CitySearch } from './CitySearch';
 import { CurrentWeather } from './CurrentWeather';
 import { ForecastDisplay } from './ForecastDisplay';
 import { ForecastCharts } from './ForecastCharts';
-import { AirQualityModule } from './AirQualityModule'; // New import
+import { AirQualityModule } from './AirQualityModule';
+import { CityWebcam } from './CityWebcam'; // New import
 import { fetchWeatherData } from '@/lib/weather-api';
 import type { WeatherAPIResponse } from '@/types/weather';
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, Wind } from "lucide-react";
+import { Terminal, Wind, Camera } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const DEFAULT_CITY = 'London';
@@ -27,18 +28,28 @@ export function WeatherDashboard() {
   useEffect(() => {
     const lastSearchedCity = localStorage.getItem(LAST_CITY_KEY) || DEFAULT_CITY;
     setCity(lastSearchedCity);
-    setIsLoading(false); 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
+
+  useEffect(() => {
+    // Automatically load data if city is set (either from localStorage or after a search)
+    // and if there's no weather data yet, or if the city has changed
+    if (city && (!weatherData || weatherData.location.name !== city)) {
+      loadWeatherData(city);
+    }
+    // Only run when city changes, or when weatherData becomes null (e.g. after an error)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [city]);
+
 
   const loadWeatherData = useCallback(async (cityName: string) => {
     setIsLoading(true);
     setError(null);
-    setWeatherData(null); 
+    // setWeatherData(null); // Keep previous data while loading new one for smoother UX
     try {
       const data = await fetchWeatherData(cityName);
       setWeatherData(data);
-      setCity(data.location.name); 
+      // setCity(data.location.name); // City is already set by handleSearch or initial load
       localStorage.setItem(LAST_CITY_KEY, data.location.name);
       
     } catch (err: any) {
@@ -56,7 +67,7 @@ export function WeatherDashboard() {
 
   const handleSearch = (searchedCity: string) => {
     if (searchedCity.trim() === "") return;
-    loadWeatherData(searchedCity);
+    setCity(searchedCity.trim()); // This will trigger the useEffect to load data
   };
   
   const WeatherSkeleton = () => (
@@ -65,6 +76,7 @@ export function WeatherDashboard() {
       <ForecastSkeleton />
       <ChartsSkeleton /> 
       <AirQualitySkeleton />
+      <WebcamSkeleton />
     </div>
   );
 
@@ -130,6 +142,14 @@ export function WeatherDashboard() {
       <Skeleton className="h-4 w-full" />
     </div>
   );
+
+  const WebcamSkeleton = () => (
+    <div className="mt-6 p-6 border rounded-lg shadow-sm">
+      <Skeleton className="h-8 w-1/3 mb-4" /> {/* Title */}
+      <Skeleton className="aspect-video w-full mb-4" /> {/* Image Placeholder */}
+      <Skeleton className="h-10 w-1/2 mx-auto" /> {/* Button */}
+    </div>
+  );
   
 
   const isWeatherApiKeyMissing = !process.env.NEXT_PUBLIC_WEATHER_API_KEY;
@@ -137,7 +157,7 @@ export function WeatherDashboard() {
 
   return (
     <div className="container mx-auto px-4 py-8 flex-grow">
-      <CitySearch onSearch={handleSearch} initialCity={city} isLoading={isLoading} />
+      <CitySearch onSearch={handleSearch} initialCity={city} isLoading={isLoading && !!city} />
       
       {isWeatherApiKeyMissing && (
         <Alert variant="destructive" className="my-4">
@@ -159,7 +179,7 @@ export function WeatherDashboard() {
       )}
 
 
-      {error && (
+      {error && !isLoading && ( // Show error only if not loading (to avoid showing stale error during new load)
          <Alert variant="destructive" className="my-4">
           <Terminal className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
@@ -177,13 +197,24 @@ export function WeatherDashboard() {
           <AirQualityModule 
             currentAirPollution={weatherData.airPollution} 
             forecastAirPollution={weatherData.airPollutionForecast}
-            timezoneOffset={weatherData.location.localtime_epoch - Math.floor(Date.now()/1000) + weatherData.location.tz_id.startsWith('Etc/GMT+') ? -parseInt(weatherData.location.tz_id.split('+')[1])*3600 : (weatherData.location.tz_id.startsWith('Etc/GMT-') ? parseInt(weatherData.location.tz_id.split('-')[1])*3600 : 0)}
+            timezoneOffset={weatherData.location.localtime_epoch - Math.floor(Date.now()/1000) + (weatherData.location.tz_id.startsWith('Etc/GMT+') ? -parseInt(weatherData.location.tz_id.split('+')[1])*3600 : (weatherData.location.tz_id.startsWith('Etc/GMT-') ? parseInt(weatherData.location.tz_id.split('-')[1])*3600 : 0))}
+          />
+          <CityWebcam 
+            latitude={weatherData.location.lat}
+            longitude={weatherData.location.lon}
+            cityName={weatherData.location.name}
           />
         </div>
       )}
        {!isLoading && !weatherData && !error && !city && ( 
         <div className="text-center py-10">
           <p className="text-xl text-muted-foreground">Enter a city to get started.</p>
+          <Camera size={48} className="mx-auto mt-4 text-muted-foreground/50" />
+        </div>
+      )}
+       {!isLoading && !weatherData && !error && city && (
+        <div className="text-center py-10">
+          <p className="text-xl text-muted-foreground">No weather data to display for {city}. Try another search.</p>
         </div>
       )}
     </div>
