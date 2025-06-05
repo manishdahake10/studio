@@ -8,11 +8,11 @@ import { ForecastDisplay } from './ForecastDisplay';
 import { ForecastCharts } from './ForecastCharts';
 import { AirQualityModule } from './AirQualityModule';
 import { CityWebcam } from './CityWebcam';
-import { WeatherNews } from './WeatherNews'; // New import
+import { WeatherNews } from './WeatherNews';
 import { fetchWeatherData } from '@/lib/weather-api';
-import { fetchWeatherNews } from '@/lib/news-api'; // New import
+import { fetchWeatherNews } from '@/lib/news-api';
 import type { WeatherAPIResponse } from '@/types/weather';
-import type { NewsArticle } from '@/types/news'; // New import
+import type { NewsArticle } from '@/types/news';
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Wind, Camera, Newspaper } from "lucide-react";
@@ -23,10 +23,10 @@ const LAST_CITY_KEY = 'weatherweaver_last_city';
 
 export function WeatherDashboard() {
   const [weatherData, setWeatherData] = useState<WeatherAPIResponse | null>(null);
-  const [newsArticles, setNewsArticles] = useState<NewsArticle[] | null>(null); // New state
+  const [newsArticles, setNewsArticles] = useState<NewsArticle[] | null>(null);
   const [city, setCity] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true); // For weather data
-  const [isNewsLoading, setIsNewsLoading] = useState(true); // For news data
+  const [isLoading, setIsLoading] = useState(true); 
+  const [isNewsLoading, setIsNewsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -36,7 +36,7 @@ export function WeatherDashboard() {
   }, []); 
 
   useEffect(() => {
-    if (city && (!weatherData || weatherData.location.name !== city)) {
+    if (city && (!weatherData || weatherData.location.name.toLowerCase() !== city.toLowerCase())) {
       loadInitialData(city);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -72,7 +72,6 @@ export function WeatherDashboard() {
       if (newsResult.status === 'fulfilled') {
         setNewsArticles(newsResult.value);
       } else {
-        // Silently fail for news or show a less intrusive warning
         console.error("Failed to fetch news:", newsResult.reason);
         toast({
           title: "News Update Unavailable",
@@ -82,7 +81,7 @@ export function WeatherDashboard() {
         setNewsArticles(null);
       }
 
-    } catch (err: any) { // Catch any unexpected error from Promise.allSettled (though unlikely here)
+    } catch (err: any) { 
       setError(err.message || 'An unexpected error occurred during data loading.');
       toast({
         title: "Error Loading Data",
@@ -104,12 +103,12 @@ export function WeatherDashboard() {
   
   const WeatherSkeleton = () => (
     <div className="space-y-6">
+      <NewsSectionSkeleton /> {/* Moved to top */}
       <CardSkeleton />
       <ForecastSkeleton />
       <ChartsSkeleton /> 
       <AirQualitySkeleton />
       <WebcamSkeleton />
-      <NewsSectionSkeleton /> {/* New skeleton section */}
     </div>
   );
 
@@ -185,18 +184,18 @@ export function WeatherDashboard() {
   );
 
   const NewsSectionSkeleton = () => (
-    <div className="mt-6 p-6 border rounded-lg shadow-sm">
-      <Skeleton className="h-8 w-1/3 mb-4" /> {/* Title: Weather News */}
+    <div className="p-6 border rounded-lg shadow-sm"> {/* Removed mt-6 to rely on parent's space-y */}
+      <Skeleton className="h-8 w-1/3 mb-4" />
       <div className="space-y-4">
         {[...Array(3)].map((_, i) => (
           <div key={i} className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg">
-            <Skeleton className="w-full sm:w-1/3 md:w-1/4 h-32 sm:h-auto aspect-video rounded-md" /> {/* Image Placeholder */}
+            <Skeleton className="w-full sm:w-1/3 md:w-1/4 h-32 sm:h-auto aspect-video rounded-md" />
             <div className="flex-1 space-y-2">
-              <Skeleton className="h-5 w-3/4" /> {/* Article Title */}
-              <Skeleton className="h-3 w-1/2 mb-1" /> {/* Source/Date */}
-              <Skeleton className="h-4 w-full" /> {/* Description line 1 */}
-              <Skeleton className="h-4 w-5/6" /> {/* Description line 2 */}
-              <Skeleton className="h-8 w-24 mt-2" /> {/* Read More Button */}
+              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-3 w-1/2 mb-1" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-8 w-24 mt-2" />
             </div>
           </div>
         ))}
@@ -242,6 +241,9 @@ export function WeatherDashboard() {
       
       {!isLoading && weatherData && (
         <div className="space-y-6">
+          {!isNewsLoading && newsArticles && newsArticles.length > 0 && (
+            <WeatherNews newsArticles={newsArticles} cityName={weatherData.location.name} />
+          )}
           <CurrentWeather data={weatherData} />
           <ForecastDisplay forecastDays={weatherData.forecast?.forecastday} />
           <ForecastCharts forecastDays={weatherData.forecast?.forecastday} />
@@ -255,9 +257,6 @@ export function WeatherDashboard() {
             longitude={weatherData.location.lon}
             cityName={weatherData.location.name}
           />
-           {!isNewsLoading && newsArticles && newsArticles.length > 0 && (
-            <WeatherNews newsArticles={newsArticles} cityName={weatherData.location.name} />
-          )}
         </div>
       )}
        {!isLoading && !weatherData && !error && !city && ( 
