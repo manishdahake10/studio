@@ -7,12 +7,15 @@ import { CurrentWeather } from './CurrentWeather';
 import { ForecastDisplay } from './ForecastDisplay';
 import { ForecastCharts } from './ForecastCharts';
 import { AirQualityModule } from './AirQualityModule';
-import { CityWebcam } from './CityWebcam'; // New import
+import { CityWebcam } from './CityWebcam';
+import { WeatherNews } from './WeatherNews'; // New import
 import { fetchWeatherData } from '@/lib/weather-api';
+import { fetchWeatherNews } from '@/lib/news-api'; // New import
 import type { WeatherAPIResponse } from '@/types/weather';
+import type { NewsArticle } from '@/types/news'; // New import
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, Wind, Camera } from "lucide-react";
+import { Terminal, Wind, Camera, Newspaper } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const DEFAULT_CITY = 'London';
@@ -20,54 +23,83 @@ const LAST_CITY_KEY = 'weatherweaver_last_city';
 
 export function WeatherDashboard() {
   const [weatherData, setWeatherData] = useState<WeatherAPIResponse | null>(null);
+  const [newsArticles, setNewsArticles] = useState<NewsArticle[] | null>(null); // New state
   const [city, setCity] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // For weather data
+  const [isNewsLoading, setIsNewsLoading] = useState(true); // For news data
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const lastSearchedCity = localStorage.getItem(LAST_CITY_KEY) || DEFAULT_CITY;
     setCity(lastSearchedCity);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
 
   useEffect(() => {
-    // Automatically load data if city is set (either from localStorage or after a search)
-    // and if there's no weather data yet, or if the city has changed
     if (city && (!weatherData || weatherData.location.name !== city)) {
-      loadWeatherData(city);
+      loadInitialData(city);
     }
-    // Only run when city changes, or when weatherData becomes null (e.g. after an error)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [city]);
 
-
-  const loadWeatherData = useCallback(async (cityName: string) => {
+  const loadInitialData = useCallback(async (cityName: string) => {
     setIsLoading(true);
+    setIsNewsLoading(true);
     setError(null);
-    // setWeatherData(null); // Keep previous data while loading new one for smoother UX
+    
     try {
-      const data = await fetchWeatherData(cityName);
-      setWeatherData(data);
-      // setCity(data.location.name); // City is already set by handleSearch or initial load
-      localStorage.setItem(LAST_CITY_KEY, data.location.name);
-      
-    } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred.');
+      const weatherPromise = fetchWeatherData(cityName);
+      const newsPromise = fetchWeatherNews(cityName);
+
+      const [weatherResult, newsResult] = await Promise.allSettled([
+        weatherPromise,
+        newsPromise
+      ]);
+
+      if (weatherResult.status === 'fulfilled') {
+        setWeatherData(weatherResult.value);
+        localStorage.setItem(LAST_CITY_KEY, weatherResult.value.location.name);
+      } else {
+        setError(weatherResult.reason?.message || 'Failed to fetch weather data.');
+        toast({
+          title: "Error Fetching Weather",
+          description: weatherResult.reason?.message || 'Could not fetch weather data.',
+          variant: "destructive",
+        });
+        setWeatherData(null);
+      }
+
+      if (newsResult.status === 'fulfilled') {
+        setNewsArticles(newsResult.value);
+      } else {
+        // Silently fail for news or show a less intrusive warning
+        console.error("Failed to fetch news:", newsResult.reason);
+        toast({
+          title: "News Update Unavailable",
+          description: "Could not fetch the latest weather news articles.",
+          variant: "default", 
+        });
+        setNewsArticles(null);
+      }
+
+    } catch (err: any) { // Catch any unexpected error from Promise.allSettled (though unlikely here)
+      setError(err.message || 'An unexpected error occurred during data loading.');
       toast({
-        title: "Error Fetching Data",
-        description: err.message || 'Could not fetch weather or air quality data. Please try another city or check your API keys.',
+        title: "Error Loading Data",
+        description: err.message || 'An unexpected error occurred.',
         variant: "destructive",
       });
-      setWeatherData(null); 
+      setWeatherData(null);
+      setNewsArticles(null);
     } finally {
       setIsLoading(false);
+      setIsNewsLoading(false);
     }
   }, [toast]);
 
   const handleSearch = (searchedCity: string) => {
     if (searchedCity.trim() === "") return;
-    setCity(searchedCity.trim()); // This will trigger the useEffect to load data
+    setCity(searchedCity.trim()); 
   };
   
   const WeatherSkeleton = () => (
@@ -77,6 +109,7 @@ export function WeatherDashboard() {
       <ChartsSkeleton /> 
       <AirQualitySkeleton />
       <WebcamSkeleton />
+      <NewsSectionSkeleton /> {/* New skeleton section */}
     </div>
   );
 
@@ -145,19 +178,38 @@ export function WeatherDashboard() {
 
   const WebcamSkeleton = () => (
     <div className="mt-6 p-6 border rounded-lg shadow-sm">
-      <Skeleton className="h-8 w-1/3 mb-4" /> {/* Title */}
-      <Skeleton className="aspect-video w-full mb-4" /> {/* Image Placeholder */}
-      <Skeleton className="h-10 w-1/2 mx-auto" /> {/* Button */}
+      <Skeleton className="h-8 w-1/3 mb-4" />
+      <Skeleton className="aspect-video w-full mb-4" />
+      <Skeleton className="h-10 w-1/2 mx-auto" />
+    </div>
+  );
+
+  const NewsSectionSkeleton = () => (
+    <div className="mt-6 p-6 border rounded-lg shadow-sm">
+      <Skeleton className="h-8 w-1/3 mb-4" /> {/* Title: Weather News */}
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg">
+            <Skeleton className="w-full sm:w-1/3 md:w-1/4 h-32 sm:h-auto aspect-video rounded-md" /> {/* Image Placeholder */}
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-5 w-3/4" /> {/* Article Title */}
+              <Skeleton className="h-3 w-1/2 mb-1" /> {/* Source/Date */}
+              <Skeleton className="h-4 w-full" /> {/* Description line 1 */}
+              <Skeleton className="h-4 w-5/6" /> {/* Description line 2 */}
+              <Skeleton className="h-8 w-24 mt-2" /> {/* Read More Button */}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
   
-
   const isWeatherApiKeyMissing = !process.env.NEXT_PUBLIC_WEATHER_API_KEY;
   const isAirPollutionApiKeyMissing = !process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY;
 
   return (
     <div className="container mx-auto px-4 py-8 flex-grow">
-      <CitySearch onSearch={handleSearch} initialCity={city} isLoading={isLoading && !!city} />
+      <CitySearch onSearch={handleSearch} initialCity={city} isLoading={(isLoading || isNewsLoading) && !!city} />
       
       {isWeatherApiKeyMissing && (
         <Alert variant="destructive" className="my-4">
@@ -178,8 +230,7 @@ export function WeatherDashboard() {
         </Alert>
       )}
 
-
-      {error && !isLoading && ( // Show error only if not loading (to avoid showing stale error during new load)
+      {error && !isLoading && (
          <Alert variant="destructive" className="my-4">
           <Terminal className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
@@ -187,7 +238,7 @@ export function WeatherDashboard() {
         </Alert>
       )}
 
-      {isLoading && city && <WeatherSkeleton />}
+      {(isLoading || isNewsLoading) && city && <WeatherSkeleton />}
       
       {!isLoading && weatherData && (
         <div className="space-y-6">
@@ -204,6 +255,9 @@ export function WeatherDashboard() {
             longitude={weatherData.location.lon}
             cityName={weatherData.location.name}
           />
+           {!isNewsLoading && newsArticles && newsArticles.length > 0 && (
+            <WeatherNews newsArticles={newsArticles} cityName={weatherData.location.name} />
+          )}
         </div>
       )}
        {!isLoading && !weatherData && !error && !city && ( 
@@ -212,7 +266,7 @@ export function WeatherDashboard() {
           <Camera size={48} className="mx-auto mt-4 text-muted-foreground/50" />
         </div>
       )}
-       {!isLoading && !weatherData && !error && city && (
+       {!isLoading && !weatherData && !error && city && !isNewsLoading && (
         <div className="text-center py-10">
           <p className="text-xl text-muted-foreground">No weather data to display for {city}. Try another search.</p>
         </div>
