@@ -7,7 +7,6 @@ import { CurrentWeather } from './CurrentWeather';
 import { ForecastDisplay } from './ForecastDisplay';
 import { ForecastCharts } from './ForecastCharts';
 import { AirQualityModule } from './AirQualityModule';
-import { CityWebcam } from './CityWebcam';
 import { WeatherNews } from './WeatherNews';
 import { fetchWeatherData } from '@/lib/weather-api';
 import { fetchWeatherNews } from '@/lib/news-api';
@@ -103,12 +102,11 @@ export function WeatherDashboard() {
   
   const WeatherSkeleton = () => (
     <div className="space-y-6">
-      <NewsSectionSkeleton /> {/* Moved to top */}
+      <NewsSectionSkeleton />
       <CardSkeleton />
       <ForecastSkeleton />
       <ChartsSkeleton /> 
       <AirQualitySkeleton />
-      <WebcamSkeleton />
     </div>
   );
 
@@ -175,16 +173,8 @@ export function WeatherDashboard() {
     </div>
   );
 
-  const WebcamSkeleton = () => (
-    <div className="mt-6 p-6 border rounded-lg shadow-sm">
-      <Skeleton className="h-8 w-1/3 mb-4" />
-      <Skeleton className="aspect-video w-full mb-4" />
-      <Skeleton className="h-10 w-1/2 mx-auto" />
-    </div>
-  );
-
   const NewsSectionSkeleton = () => (
-    <div className="p-6 border rounded-lg shadow-sm"> {/* Removed mt-6 to rely on parent's space-y */}
+    <div className="p-6 border rounded-lg shadow-sm">
       <Skeleton className="h-8 w-1/3 mb-4" />
       <div className="space-y-4">
         {[...Array(3)].map((_, i) => (
@@ -251,11 +241,6 @@ export function WeatherDashboard() {
             currentAirPollution={weatherData.airPollution} 
             forecastAirPollution={weatherData.airPollutionForecast}
             timezoneOffset={weatherData.location.localtime_epoch - Math.floor(Date.now()/1000) + (weatherData.location.tz_id.startsWith('Etc/GMT+') ? -parseInt(weatherData.location.tz_id.split('+')[1])*3600 : (weatherData.location.tz_id.startsWith('Etc/GMT-') ? parseInt(weatherData.location.tz_id.split('-')[1])*3600 : 0))}
-          />
-          <CityWebcam 
-            latitude={weatherData.location.lat}
-            longitude={weatherData.location.lon}
-            cityName={weatherData.location.name}
           />
         </div>
       )}
