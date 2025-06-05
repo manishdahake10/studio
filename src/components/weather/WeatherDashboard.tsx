@@ -5,7 +5,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { CitySearch } from './CitySearch';
 import { CurrentWeather } from './CurrentWeather';
 import { ForecastDisplay } from './ForecastDisplay';
-import { WeatherSummary } from './WeatherSummary';
 import { ForecastCharts } from './ForecastCharts';
 import { AirQualityModule } from './AirQualityModule'; // New import
 import { fetchWeatherData } from '@/lib/weather-api';
@@ -28,18 +27,14 @@ export function WeatherDashboard() {
   useEffect(() => {
     const lastSearchedCity = localStorage.getItem(LAST_CITY_KEY) || DEFAULT_CITY;
     setCity(lastSearchedCity);
-    // Don't auto-load on mount to avoid immediate double fetch with default city if user searches quickly.
-    // Let the user initiate the first search or restore from local storage if desired.
-    // For now, we start with a loading state until a search is made.
-    // If you want to auto-load for last city: loadWeatherData(lastSearchedCity);
-    setIsLoading(false); // Allow search input
+    setIsLoading(false); 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
 
   const loadWeatherData = useCallback(async (cityName: string) => {
     setIsLoading(true);
     setError(null);
-    setWeatherData(null); // Clear previous data
+    setWeatherData(null); 
     try {
       const data = await fetchWeatherData(cityName);
       setWeatherData(data);
@@ -70,7 +65,6 @@ export function WeatherDashboard() {
       <ForecastSkeleton />
       <ChartsSkeleton /> 
       <AirQualitySkeleton />
-      <SummarySkeleton />
     </div>
   );
 
@@ -131,20 +125,12 @@ export function WeatherDashboard() {
         <Skeleton className="h-10 w-1/2 mr-1" />
         <Skeleton className="h-10 w-1/2 ml-1" />
       </div>
-      <Skeleton className="h-[200px] w-full mb-4" /> {/* Placeholder for chart */}
+      <Skeleton className="h-[200px] w-full mb-4" />
       <Skeleton className="h-5 w-1/2 mb-2" />
       <Skeleton className="h-4 w-full" />
     </div>
   );
   
-  const SummarySkeleton = () => (
-    <div className="mt-6 p-6 border rounded-lg shadow-sm">
-      <Skeleton className="h-8 w-1/2 mb-4" />
-      <Skeleton className="h-10 w-32 mb-4" />
-      <Skeleton className="h-4 w-full mb-2" />
-      <Skeleton className="h-4 w-3/4" />
-    </div>
-  );
 
   const isWeatherApiKeyMissing = !process.env.NEXT_PUBLIC_WEATHER_API_KEY;
   const isAirPollutionApiKeyMissing = !process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY;
@@ -181,7 +167,7 @@ export function WeatherDashboard() {
         </Alert>
       )}
 
-      {isLoading && city && <WeatherSkeleton />} {/* Show skeleton only if a city search has been initiated */}
+      {isLoading && city && <WeatherSkeleton />}
       
       {!isLoading && weatherData && (
         <div className="space-y-6">
@@ -193,10 +179,9 @@ export function WeatherDashboard() {
             forecastAirPollution={weatherData.airPollutionForecast}
             timezoneOffset={weatherData.location.localtime_epoch - Math.floor(Date.now()/1000) + weatherData.location.tz_id.startsWith('Etc/GMT+') ? -parseInt(weatherData.location.tz_id.split('+')[1])*3600 : (weatherData.location.tz_id.startsWith('Etc/GMT-') ? parseInt(weatherData.location.tz_id.split('-')[1])*3600 : 0)}
           />
-          <WeatherSummary weatherData={weatherData} />
         </div>
       )}
-       {!isLoading && !weatherData && !error && !city && ( // Initial state before any search
+       {!isLoading && !weatherData && !error && !city && ( 
         <div className="text-center py-10">
           <p className="text-xl text-muted-foreground">Enter a city to get started.</p>
         </div>
