@@ -6,9 +6,10 @@ import dynamic from 'next/dynamic';
 import type { LatLngExpression } from 'leaflet'; // Type-only import
 
 // Dynamically import react-leaflet components
+// Removed individual loading fallbacks here, will rely on the main Suspense
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
-  { ssr: false, loading: () => <div className="flex items-center justify-center h-full bg-muted"><p className="text-muted-foreground">Loading map core...</p></div> }
+  { ssr: false }
 );
 const TileLayer = dynamic(
   () => import('react-leaflet').then((mod) => mod.TileLayer),
@@ -24,12 +25,10 @@ const Popup = dynamic(
 );
 const LayersControl = dynamic(
   () => import('react-leaflet').then((mod) => mod.LayersControl),
-  { ssr: false, loading: () => <div className="flex items-center justify-center h-full bg-muted"><p className="text-muted-foreground">Loading map controls...</p></div> }
+  { ssr: false }
 );
 
-// Leaflet image assets - these require appropriate bundler setup
-// If these `require` calls fail, it means images won't load, not the primary cause of "map container initialized"
-// but important for map appearance.
+// Leaflet image assets
 let iconRetinaUrlSrc: string | undefined;
 let iconUrlSrc: string | undefined;
 let shadowUrlSrc: string | undefined;
@@ -41,11 +40,6 @@ if (typeof window !== 'undefined') {
     shadowUrlSrc = require('leaflet/dist/images/marker-shadow.png').default || require('leaflet/dist/images/marker-shadow.png');
   } catch (e) {
     console.warn("Could not load Leaflet marker image assets via require:", e);
-    // Fallback paths if require fails, assuming images are in public/leaflet-images/
-    // This part is a guess, if `require` works, these are not used.
-    // iconRetinaUrlSrc = '/leaflet-images/marker-icon-2x.png';
-    // iconUrlSrc = '/leaflet-images/marker-icon.png';
-    // shadowUrlSrc = '/leaflet-images/marker-shadow.png';
   }
 }
 
@@ -60,7 +54,7 @@ export default function MapPage() {
 
     if (typeof window !== 'undefined') {
       import('leaflet').then(LModule => {
-        const L = LModule.default || LModule; // Handle potential default export
+        const L = LModule.default || LModule; 
 
         if (L && L.Icon && L.Icon.Default) {
           if (iconUrlSrc && iconRetinaUrlSrc && shadowUrlSrc) {
@@ -79,7 +73,7 @@ export default function MapPage() {
         setIsLeafletReady(true);
       }).catch(error => {
         console.error("Failed to load Leaflet module for icon fix:", error);
-        setIsLeafletReady(true); // Still allow map to try rendering, icons might be broken
+        setIsLeafletReady(true); 
       });
     }
   }, []);
@@ -155,4 +149,3 @@ export default function MapPage() {
     </div>
   );
 }
-
