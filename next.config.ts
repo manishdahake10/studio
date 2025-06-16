@@ -23,9 +23,9 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/weather/64x64/**',
       },
-      { 
+      {
         protocol: 'https',
-        hostname: 'openweathermap.org', 
+        hostname: 'openweathermap.org',
         port: '',
         pathname: '/img/wn/**',
       },
@@ -35,7 +35,13 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/map/**',
       },
-      // Add NewsAPI image sources if needed - common ones:
+      // NewsAPI/GNews image sources
+      {
+        protocol: 'https',
+        hostname: 'www.theweek.in', // Added for the specific error
+        port: '',
+        pathname: '/**',
+      },
       {
         protocol: 'https',
         hostname: '**.com', // General pattern, might need to be more specific
