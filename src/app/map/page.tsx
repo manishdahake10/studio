@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, Suspense, useCallback } from 'react';
+import { useEffect, useState, Suspense, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import type { LatLngExpression, GeoJSON as LeafletGeoJSON, Layer, PathOptions, Feature, GeoJsonObject, Geometry } from 'leaflet'; // Type-only import
 import type { GeoJSONProps } from 'react-leaflet';
@@ -16,11 +16,11 @@ const TileLayer = dynamic(
   () => import('react-leaflet').then((mod) => mod.TileLayer),
   { ssr: false }
 );
-const Marker = dynamic( // Keep Marker for potential future use or if needed by other logic
+const Marker = dynamic(
   () => import('react-leaflet').then((mod) => mod.Marker),
   { ssr: false }
 );
-const Popup = dynamic( // Keep Popup for potential future use
+const Popup = dynamic(
   () => import('react-leaflet').then((mod) => mod.Popup),
   { ssr: false }
 );
@@ -103,47 +103,46 @@ export default function MapPage() {
   
   const openWeatherMapAttribution = '&copy; <a href="https://openweathermap.org/">OpenWeatherMap</a>';
   
-  const precipitationLayerUrl = apiKey
+  const precipitationLayerUrl = useMemo(() => apiKey
     ? `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${apiKey}`
-    : undefined;
-  const temperatureLayerUrl = apiKey
+    : undefined, [apiKey]);
+  const temperatureLayerUrl = useMemo(() => apiKey
     ? `https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${apiKey}`
-    : undefined;
-  const windSpeedLayerUrl = apiKey
+    : undefined, [apiKey]);
+  const windSpeedLayerUrl = useMemo(() => apiKey
     ? `https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${apiKey}`
-    : undefined;
+    : undefined, [apiKey]);
 
 
-  const countryStyle: PathOptions = {
+  const countryStyle: PathOptions = useMemo(() => ({
     fillColor: 'transparent',
     fillOpacity: 0.1,
     color: '#00FFFF', // Cyan
     weight: 1,
     opacity: 0.7,
-  };
+  }), []);
 
   const highlightFeature = useCallback((e: { target: Layer }) => {
-    const layer = e.target as LeafletGeoJSON;
+    const layer = e.target as LeafletGeoJSON; // More specific type
     layer.setStyle({
       weight: 2.5,
-      color: '#00FFFF',
+      color: '#00FFFF', // Ensure highlight uses a distinct, perhaps brighter cyan or white
       fillColor: '#00FFFF',
       fillOpacity: 0.3,
     });
-    if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
-      layer.bringToFront();
-    }
+    // L may not be defined here if used directly
+    // For bringing to front, react-leaflet usually handles this with z-index or specific layer methods
+    // if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) { // L might not be in scope
+    //   layer.bringToFront(); 
+    // }
   }, []);
 
   const resetHighlight = useCallback((e: { target: Layer }) => {
     const layer = e.target as LeafletGeoJSON;
-    // Check if the layer has a 'resetStyle' method or if it's a GeoJSON layer to reset explicitly
-    if (typeof (layer as any).resetStyle === 'function') {
-        (layer as any).resetStyle(layer); // For react-leaflet v3+
-    } else {
-         // Fallback or for different react-leaflet versions, you might need to re-apply the original style
-        layer.setStyle(countryStyle);
-    }
+     // react-leaflet's GeoJSON component typically handles resetting its own style.
+     // If it's a direct Leaflet layer that react-leaflet wraps, it would be `layer.resetStyle(e.target);`
+     // For react-leaflet GeoJSON, it should manage its state, or you re-apply the original style.
+    layer.setStyle(countryStyle);
   }, [countryStyle]);
 
 
@@ -158,7 +157,9 @@ export default function MapPage() {
         // Placeholder for future click functionality (e.g., fetch weather)
         console.log(`Clicked on ${countryName}`);
         // Example: Show a popup on click (can be expanded later)
-        (layer as LeafletGeoJSON).bindPopup(`Detailed info for ${countryName} coming soon!`).openPopup();
+        if ((layer as any).bindPopup) { // Check if bindPopup exists
+            (layer as LeafletGeoJSON).bindPopup(`Detailed info for ${countryName} coming soon!`).openPopup();
+        }
       }
     });
   }, [highlightFeature, resetHighlight]);
@@ -193,6 +194,7 @@ export default function MapPage() {
                 {countriesData && GeoJSON && (
                   <LayersControl.Overlay checked name="Country Borders">
                     <GeoJSON 
+                        key={JSON.stringify(countriesData)} // Add key if data can change
                         data={countriesData} 
                         style={countryStyle} 
                         onEachFeature={onEachCountry} 
@@ -290,3 +292,4 @@ export default function MapPage() {
     </div>
   );
 }
+
