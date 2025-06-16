@@ -32,7 +32,7 @@ export async function fetchWeatherNews(city: string): Promise<NewsArticle[]> {
   }
 
   // Construct a query that is more likely to yield weather-related news for the city
-  const query = `"${city}" (weather OR climate OR temperature OR forecast OR storm OR flood OR heatwave OR drought)`;
+  const query = `"${city}" AND (weather OR climate OR temperature OR forecast OR storm OR flood OR heatwave OR drought)`;
   const url = `${GNEWS_API_BASE_URL}?q=${encodeURIComponent(query)}&token=${NEWS_API_KEY}&lang=en&max=5&sortBy=publishedAt`;
 
   try {

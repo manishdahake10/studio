@@ -71,11 +71,12 @@ export function WeatherDashboard() {
       if (newsResult.status === 'fulfilled') {
         setNewsArticles(newsResult.value);
       } else {
+        const newsErrorMessage = newsResult.reason?.message || "Could not fetch the latest weather news articles.";
         console.error("Failed to fetch news:", newsResult.reason);
         toast({
           title: "News Update Unavailable",
-          description: newsResult.reason?.message || "Could not fetch the latest weather news articles.",
-          variant: "default", 
+          description: newsErrorMessage,
+          variant: newsErrorMessage.toLowerCase().includes("api key") ? "destructive" : "default",
         });
         setNewsArticles(null);
       }
@@ -229,7 +230,7 @@ export function WeatherDashboard() {
           <Newspaper className="h-4 w-4" />
           <AlertTitle>News API Key Missing</AlertTitle>
           <AlertDescription>
-            The NewsAPI.org key (NEXT_PUBLIC_NEWS_API_KEY) is not configured. News articles will not be available.
+            The News API key (NEXT_PUBLIC_NEWS_API_KEY) is not configured. News articles will not be available.
           </AlertDescription>
         </Alert>
       )}
@@ -244,31 +245,37 @@ export function WeatherDashboard() {
 
       {(isLoading || isNewsLoading) && city && <CombinedSkeleton />}
       
-      {!isLoading && weatherData && (
+      {!isLoading && (weatherData || newsArticles) && ( // Ensure rendering happens if either data is present post-loading
         <div className="space-y-6">
           {/* News Section Logic */}
-          {!isNewsLoading && (
-            <WeatherNews newsArticles={newsArticles} cityName={weatherData.location.name} />
+          {!isNewsLoading && ( // Render news once its specific loading is done
+            <WeatherNews newsArticles={newsArticles} cityName={weatherData?.location.name} />
           )}
-          <CurrentWeather data={weatherData} />
-          <ForecastDisplay forecastDays={weatherData.forecast?.forecastday} />
-          <ForecastCharts forecastDays={weatherData.forecast?.forecastday} />
-          <AirQualityModule 
-            currentAirPollution={weatherData.airPollution} 
-            forecastAirPollution={weatherData.airPollutionForecast}
-            timezoneOffset={weatherData.location.localtime_epoch - Math.floor(Date.now()/1000) + (weatherData.location.tz_id.startsWith('Etc/GMT+') ? -parseInt(weatherData.location.tz_id.split('+')[1])*3600 : (weatherData.location.tz_id.startsWith('Etc/GMT-') ? parseInt(weatherData.location.tz_id.split('-')[1])*3600 : 0))}
-          />
+          {weatherData && ( // Render weather components only if weatherData exists
+            <>
+              <CurrentWeather data={weatherData} />
+              <ForecastDisplay forecastDays={weatherData.forecast?.forecastday} />
+              <ForecastCharts forecastDays={weatherData.forecast?.forecastday} />
+              <AirQualityModule 
+                currentAirPollution={weatherData.airPollution} 
+                forecastAirPollution={weatherData.airPollutionForecast}
+                timezoneOffset={weatherData.location.localtime_epoch - Math.floor(Date.now()/1000) + (weatherData.location.tz_id.startsWith('Etc/GMT+') ? -parseInt(weatherData.location.tz_id.split('+')[1])*3600 : (weatherData.location.tz_id.startsWith('Etc/GMT-') ? parseInt(weatherData.location.tz_id.split('-')[1])*3600 : 0))}
+              />
+            </>
+          )}
         </div>
       )}
-       {!isLoading && !weatherData && !error && !city && (
+       {!isLoading && !weatherData && !newsArticles && !error && !city && ( // Initial state, no city searched
         <div className="text-center py-10">
           <p className="text-xl text-muted-foreground">Enter a city to get started.</p>
           <Camera size={48} className="mx-auto mt-4 text-muted-foreground/50" />
         </div>
       )}
-       {!isLoading && !weatherData && !error && city && !isNewsLoading && (
+       {!isLoading && !weatherData && city && !error && ( // City searched, but no weather data (implies news might also be missing or failed)
         <div className="text-center py-10">
           <p className="text-xl text-muted-foreground">No weather data to display for {city}. Try another search.</p>
+          {/* If news also failed or is empty, the WeatherNews component will show its own message */}
+          {!isNewsLoading && !newsArticles && <p className="text-md text-muted-foreground mt-2">Weather-related news for {city} could also not be found.</p>}
         </div>
       )}
     </div>
