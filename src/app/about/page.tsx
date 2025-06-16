@@ -33,7 +33,6 @@ export default function AboutPage() {
             <li><strong>City Search:</strong> Easily find weather information for any city.</li>
             <li><strong>7-Day Forecast:</strong> Plan ahead with detailed daily forecasts.</li>
             <li><strong>Air Quality Data:</strong> Stay informed about current and forecasted air pollution levels.</li>
-            <li><strong>Live Webcams (via Windy.com):</strong> Get a visual on city conditions.</li>
             <li><strong>Theme Toggle:</strong> Switch between light and dark modes for your viewing comfort.</li>
           </ul>
         </section>
@@ -50,6 +49,7 @@ export default function AboutPage() {
             <li>ShadCN UI for pre-built, accessible components</li>
             <li>Lucide Icons for a clean icon set</li>
             <li>OpenWeatherMap API for weather and air quality data</li>
+            <li>GNews.io API for weather-related news</li>
           </ul>
         </section>
 

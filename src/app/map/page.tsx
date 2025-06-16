@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 
 export default function MapPage() {
   useEffect(() => {
+    // This effect can be used to set the document title or other client-side initializations
+    // For now, it just ensures the component is client-side.
     document.title = "Map | Weather Weaver";
   }, []);
 

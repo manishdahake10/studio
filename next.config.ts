@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'openweathermap.org',
         port: '',
-        pathname: '/img/wn/**',
+        pathname: '/img/wn/**', // For weather icons from OpenWeatherMap
       },
       // NewsAPI/GNews image sources
       {

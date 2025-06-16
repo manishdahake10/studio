@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { CloudSun, MapPin } from "lucide-react";
+import { CloudSun } from "lucide-react";
 
 export function Header() {
   return (
@@ -16,9 +16,6 @@ export function Header() {
         <nav className="flex gap-x-4 sm:gap-x-6 items-center">
           <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
             Home
-          </Link>
-          <Link href="/map" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center">
-            <MapPin size={16} className="mr-1" /> Map
           </Link>
           <Link href="/about" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
             About

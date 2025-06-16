@@ -1,4 +1,4 @@
-@import 'leaflet/dist/leaflet.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -104,8 +104,5 @@
   body {
     @apply bg-background text-foreground;
     transition: background-color 0.3s ease, color 0.3s ease;
-  }
-  .leaflet-container {
-    @apply font-sans; /* Ensuring map uses a standard font if not overridden by leaflet */
   }
 }
