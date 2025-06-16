@@ -32,7 +32,7 @@ const GeoJSON = dynamic<GeoJSONProps>(
   () => import('react-leaflet').then((mod) => mod.GeoJSON),
   { ssr: false }
 );
-const Tooltip = dynamic(
+const Tooltip = dynamic( // Although not explicitly used in the current version, keeping it for potential future use
   () => import('react-leaflet').then((mod) => mod.Tooltip),
   { ssr: false }
 );
@@ -65,7 +65,7 @@ export default function MapPage() {
 
     if (typeof window !== 'undefined') {
       import('leaflet').then(LModule => {
-        const L = LModule.default || LModule; 
+        const L = LModule.default || LModule;
 
         if (L && L.Icon && L.Icon.Default) {
           if (iconUrlSrc && iconRetinaUrlSrc && shadowUrlSrc) {
@@ -84,10 +84,9 @@ export default function MapPage() {
         setIsLeafletReady(true);
       }).catch(error => {
         console.error("Failed to load Leaflet module for icon fix:", error);
-        setIsLeafletReady(true); 
+        setIsLeafletReady(true);
       });
 
-      // Fetch countries GeoJSON data
       fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json')
         .then(response => response.json())
         .then(data => setCountriesData(data as GeoJsonObject))
@@ -95,14 +94,14 @@ export default function MapPage() {
     }
   }, []);
 
-  const position: LatLngExpression = [20, 0]; // Initial map center
+  const position: LatLngExpression = [20, 0];
   const initialZoom = 2;
 
   const baseLayerUrl = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
   const cartoDBAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
-  
+
   const openWeatherMapAttribution = '&copy; <a href="https://openweathermap.org/">OpenWeatherMap</a>';
-  
+
   const precipitationLayerUrl = useMemo(() => apiKey
     ? `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${apiKey}`
     : undefined, [apiKey]);
@@ -117,31 +116,23 @@ export default function MapPage() {
   const countryStyle: PathOptions = useMemo(() => ({
     fillColor: 'transparent',
     fillOpacity: 0.1,
-    color: '#00FFFF', // Cyan
+    color: '#00FFFF',
     weight: 1,
     opacity: 0.7,
   }), []);
 
   const highlightFeature = useCallback((e: { target: Layer }) => {
-    const layer = e.target as LeafletGeoJSON; // More specific type
+    const layer = e.target as LeafletGeoJSON;
     layer.setStyle({
       weight: 2.5,
-      color: '#00FFFF', // Ensure highlight uses a distinct, perhaps brighter cyan or white
+      color: '#00FFFF',
       fillColor: '#00FFFF',
       fillOpacity: 0.3,
     });
-    // L may not be defined here if used directly
-    // For bringing to front, react-leaflet usually handles this with z-index or specific layer methods
-    // if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) { // L might not be in scope
-    //   layer.bringToFront(); 
-    // }
   }, []);
 
   const resetHighlight = useCallback((e: { target: Layer }) => {
     const layer = e.target as LeafletGeoJSON;
-     // react-leaflet's GeoJSON component typically handles resetting its own style.
-     // If it's a direct Leaflet layer that react-leaflet wraps, it would be `layer.resetStyle(e.target);`
-     // For react-leaflet GeoJSON, it should manage its state, or you re-apply the original style.
     layer.setStyle(countryStyle);
   }, [countryStyle]);
 
@@ -149,15 +140,13 @@ export default function MapPage() {
   const onEachCountry = useCallback((country: Feature<Geometry, any>, layer: Layer) => {
     const countryName = country.properties.name || "Unknown Country";
     layer.bindTooltip(countryName, {sticky: true, direction: 'auto', className: 'country-tooltip'});
-    
+
     layer.on({
       mouseover: highlightFeature,
       mouseout: resetHighlight,
       click: () => {
-        // Placeholder for future click functionality (e.g., fetch weather)
         console.log(`Clicked on ${countryName}`);
-        // Example: Show a popup on click (can be expanded later)
-        if ((layer as any).bindPopup) { // Check if bindPopup exists
+        if ((layer as any).bindPopup) {
             (layer as LeafletGeoJSON).bindPopup(`Detailed info for ${countryName} coming soon!`).openPopup();
         }
       }
@@ -174,7 +163,7 @@ export default function MapPage() {
         </p>
       </header>
 
-      <div 
+      <div
         className="h-[calc(100vh-280px)] min-h-[500px] w-full rounded-lg shadow-lg overflow-hidden border border-cyan-500/50 bg-black"
         key={isLeafletReady ? 'map-initialized' : 'map-initializing-wrapper'}
       >
@@ -190,19 +179,19 @@ export default function MapPage() {
                     maxZoom={19}
                   />
                 </LayersControl.BaseLayer>
-                
+
                 {countriesData && GeoJSON && (
                   <LayersControl.Overlay checked name="Country Borders">
-                    <GeoJSON 
-                        key={JSON.stringify(countriesData)} // Add key if data can change
-                        data={countriesData} 
-                        style={countryStyle} 
-                        onEachFeature={onEachCountry} 
+                    <GeoJSON
+                        key={JSON.stringify(countriesData)}
+                        data={countriesData}
+                        style={countryStyle}
+                        onEachFeature={onEachCountry}
                     />
                   </LayersControl.Overlay>
                 )}
 
-                {precipitationLayerUrl && (
+                {precipitationLayerUrl && TileLayer && (
                   <LayersControl.Overlay name="Precipitation">
                     <TileLayer
                       url={precipitationLayerUrl}
@@ -211,7 +200,7 @@ export default function MapPage() {
                     />
                   </LayersControl.Overlay>
                 )}
-                {temperatureLayerUrl && (
+                {temperatureLayerUrl && TileLayer && (
                   <LayersControl.Overlay name="Temperature">
                     <TileLayer
                       url={temperatureLayerUrl}
@@ -220,7 +209,7 @@ export default function MapPage() {
                     />
                   </LayersControl.Overlay>
                 )}
-                {windSpeedLayerUrl && (
+                {windSpeedLayerUrl && TileLayer && (
                   <LayersControl.Overlay name="Wind Speed">
                     <TileLayer
                       url={windSpeedLayerUrl}
@@ -230,20 +219,15 @@ export default function MapPage() {
                   </LayersControl.Overlay>
                 )}
               </LayersControl>
-              {/* Example Marker, can be removed or used for GPS location later */}
               {Marker && Popup && <Marker position={[51.505, -0.09]}><Popup>London (Example)</Popup></Marker>}
             </MapContainer>
           </Suspense>
-        ) : (
-          <div className="flex items-center justify-center h-full bg-slate-900 text-slate-200">
-            <p>Loading map resources...</p>
-          </div>
-        )}
+        ) : null}
       </div>
       <div className="mt-6 p-4 border rounded-lg bg-card text-card-foreground shadow">
         <h2 className="text-xl font-semibold mb-2">Developer Note:</h2>
         <p className="text-sm mb-1">
-          Map API Key for OWM tiles (<code className="bg-muted px-1 py-0.5 rounded text-sm">NEXT_PUBLIC_MAP_API_KEY</code>): 
+          Map API Key for OWM tiles (<code className="bg-muted px-1 py-0.5 rounded text-sm">NEXT_PUBLIC_MAP_API_KEY</code>):
           {apiKey ? (<code className="bg-muted px-1 py-0.5 rounded text-sm break-all ml-1">{apiKey}</code>) : " Not loaded"}
         </p>
         <p className="text-sm">
@@ -273,8 +257,8 @@ export default function MapPage() {
         }
         .leaflet-popup-tip {
           background: rgba(0, 20, 30, 0.9) !important;
-          border-left-color: #00FFFF !important; 
-          border-right-color: #00FFFF !important; 
+          border-left-color: #00FFFF !important;
+          border-right-color: #00FFFF !important;
         }
         .leaflet-control-layers {
             background: rgba(10, 15, 20, 0.85) !important;
@@ -292,4 +276,3 @@ export default function MapPage() {
     </div>
   );
 }
-
