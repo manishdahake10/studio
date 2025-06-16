@@ -7,11 +7,11 @@ import { CurrentWeather } from './CurrentWeather';
 import { ForecastDisplay } from './ForecastDisplay';
 import { ForecastCharts } from './ForecastCharts';
 import { AirQualityModule } from './AirQualityModule';
-import { WeatherNews } from './WeatherNews';
+import { WeatherNews } from './WeatherNews'; // Re-add import
 import { fetchWeatherData } from '@/lib/weather-api';
-import { fetchWeatherNews } from '@/lib/news-api';
+import { fetchWeatherNews } from '@/lib/news-api'; // Re-add import
 import type { WeatherAPIResponse } from '@/types/weather';
-import type { NewsArticle } from '@/types/news';
+import type { NewsArticle } from '@/types/news'; // Re-add import
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Wind, Camera, Newspaper } from "lucide-react";
@@ -22,20 +22,20 @@ const LAST_CITY_KEY = 'weatherweaver_last_city';
 
 export function WeatherDashboard() {
   const [weatherData, setWeatherData] = useState<WeatherAPIResponse | null>(null);
-  const [newsArticles, setNewsArticles] = useState<NewsArticle[] | null>(null);
+  const [newsArticles, setNewsArticles] = useState<NewsArticle[] | null>(null); // Re-add state
   const [city, setCity] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true); 
-  const [isNewsLoading, setIsNewsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isNewsLoading, setIsNewsLoading] = useState(true); // Re-add state
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const lastSearchedCity = localStorage.getItem(LAST_CITY_KEY) || DEFAULT_CITY;
     setCity(lastSearchedCity);
-  }, []); 
+  }, []);
 
   useEffect(() => {
-    if (city && (!weatherData || weatherData.location.name.toLowerCase() !== city.toLowerCase())) {
+    if (city && (!weatherData || weatherData.location.name.toLowerCase() !== city.toLowerCase() || newsArticles === null)) {
       loadInitialData(city);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -43,12 +43,13 @@ export function WeatherDashboard() {
 
   const loadInitialData = useCallback(async (cityName: string) => {
     setIsLoading(true);
-    setIsNewsLoading(true);
+    setIsNewsLoading(true); // Set news loading to true
     setError(null);
     
     try {
+      // Fetch weather and news in parallel
       const weatherPromise = fetchWeatherData(cityName);
-      const newsPromise = fetchWeatherNews(cityName);
+      const newsPromise = fetchWeatherNews(cityName); // Fetch real news
 
       const [weatherResult, newsResult] = await Promise.allSettled([
         weatherPromise,
@@ -71,16 +72,17 @@ export function WeatherDashboard() {
       if (newsResult.status === 'fulfilled') {
         setNewsArticles(newsResult.value);
       } else {
+        // News API errors are often less critical to the core app function
         console.error("Failed to fetch news:", newsResult.reason);
         toast({
           title: "News Update Unavailable",
-          description: "Could not fetch the latest weather news articles.",
-          variant: "default", 
+          description: newsResult.reason?.message || "Could not fetch the latest weather news articles.",
+          variant: "default", // Less critical than weather error
         });
-        setNewsArticles(null);
+        setNewsArticles(null); // Set to null or empty array on error
       }
 
-    } catch (err: any) { 
+    } catch (err: any) {
       setError(err.message || 'An unexpected error occurred during data loading.');
       toast({
         title: "Error Loading Data",
@@ -91,22 +93,38 @@ export function WeatherDashboard() {
       setNewsArticles(null);
     } finally {
       setIsLoading(false);
-      setIsNewsLoading(false);
+      setIsNewsLoading(false); // Set news loading to false
     }
   }, [toast]);
 
   const handleSearch = (searchedCity: string) => {
     if (searchedCity.trim() === "") return;
-    setCity(searchedCity.trim()); 
+    setCity(searchedCity.trim());
+    setNewsArticles(null); // Reset news articles on new search to show loading
   };
   
-  const WeatherSkeleton = () => (
-    <div className="space-y-6">
-      <NewsSectionSkeleton />
-      <CardSkeleton />
-      <ForecastSkeleton />
-      <ChartsSkeleton /> 
-      <AirQualitySkeleton />
+  // Skeletons
+  const NewsSectionSkeleton = () => ( // Re-add News Skeleton
+    <div className="shadow-lg border rounded-lg p-6">
+      <div className="flex items-center mb-4">
+        <Newspaper size={22} className="mr-2 text-primary" />
+        <Skeleton className="h-7 w-1/3" />
+      </div>
+      <Skeleton className="h-4 w-1/2 mb-6" />
+      <div className="space-y-6">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg">
+            <Skeleton className="w-full sm:w-1/3 md:w-1/4 h-32 sm:h-auto aspect-video rounded-md bg-muted" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-5 w-3/4 bg-muted" />
+              <Skeleton className="h-3 w-1/2 mb-1 bg-muted" />
+              <Skeleton className="h-4 w-full bg-muted" />
+              <Skeleton className="h-4 w-5/6 bg-muted" />
+              <Skeleton className="h-8 w-24 mt-2 bg-muted" />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 
@@ -173,28 +191,19 @@ export function WeatherDashboard() {
     </div>
   );
 
-  const NewsSectionSkeleton = () => (
-    <div className="p-6 border rounded-lg shadow-sm">
-      <Skeleton className="h-8 w-1/3 mb-4" />
-      <div className="space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg">
-            <Skeleton className="w-full sm:w-1/3 md:w-1/4 h-32 sm:h-auto aspect-video rounded-md" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-5 w-3/4" />
-              <Skeleton className="h-3 w-1/2 mb-1" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-5/6" />
-              <Skeleton className="h-8 w-24 mt-2" />
-            </div>
-          </div>
-        ))}
-      </div>
+  const CombinedSkeleton = () => (
+    <div className="space-y-6">
+      <NewsSectionSkeleton />
+      <CardSkeleton />
+      <ForecastSkeleton />
+      <ChartsSkeleton />
+      <AirQualitySkeleton />
     </div>
   );
   
   const isWeatherApiKeyMissing = !process.env.NEXT_PUBLIC_WEATHER_API_KEY;
   const isAirPollutionApiKeyMissing = !process.env.NEXT_PUBLIC_AIR_POLLUTION_API_KEY;
+  const isNewsApiKeyMissing = !process.env.NEXT_PUBLIC_NEWS_API_KEY; // Check for news API key
 
   return (
     <div className="container mx-auto px-4 py-8 flex-grow">
@@ -205,7 +214,7 @@ export function WeatherDashboard() {
           <Terminal className="h-4 w-4" />
           <AlertTitle>Weather API Key Missing</AlertTitle>
           <AlertDescription>
-            The OpenWeatherMap API key for weather (NEXT_PUBLIC_WEATHER_API_KEY) is not configured. Please set it in your .env file. Weather data will not be available.
+            The OpenWeatherMap API key for weather (NEXT_PUBLIC_WEATHER_API_KEY) is not configured. Weather data will not be available.
           </AlertDescription>
         </Alert>
       )}
@@ -214,12 +223,21 @@ export function WeatherDashboard() {
           <Wind className="h-4 w-4" />
           <AlertTitle>Air Pollution API Key Missing</AlertTitle>
           <AlertDescription>
-            The OpenWeatherMap API key for air pollution (NEXT_PUBLIC_AIR_POLLUTION_API_KEY) is not configured. Please set it in your .env file. Air quality data will not be available.
+            The OpenWeatherMap API key for air pollution (NEXT_PUBLIC_AIR_POLLUTION_API_KEY) is not configured. Air quality data will not be available.
+          </AlertDescription>
+        </Alert>
+      )}
+      {isNewsApiKeyMissing && ( // Alert for missing News API key
+         <Alert variant="destructive" className="my-4">
+          <Newspaper className="h-4 w-4" />
+          <AlertTitle>News API Key Missing</AlertTitle>
+          <AlertDescription>
+            The NewsAPI.org key (NEXT_PUBLIC_NEWS_API_KEY) is not configured. News articles will not be available.
           </AlertDescription>
         </Alert>
       )}
 
-      {error && !isLoading && (
+      {error && !isLoading && ( // Display general error if not loading
          <Alert variant="destructive" className="my-4">
           <Terminal className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
@@ -227,12 +245,16 @@ export function WeatherDashboard() {
         </Alert>
       )}
 
-      {(isLoading || isNewsLoading) && city && <WeatherSkeleton />}
+      {(isLoading || isNewsLoading) && city && <CombinedSkeleton />}
       
       {!isLoading && weatherData && (
         <div className="space-y-6">
+          {/* News section is now part of the main data display, shown when weather data is also available */}
           {!isNewsLoading && newsArticles && newsArticles.length > 0 && (
             <WeatherNews newsArticles={newsArticles} cityName={weatherData.location.name} />
+          )}
+          {!isNewsLoading && newsArticles && newsArticles.length === 0 && (
+             <WeatherNews newsArticles={null} cityName={weatherData.location.name} /> // Show "no news found" message
           )}
           <CurrentWeather data={weatherData} />
           <ForecastDisplay forecastDays={weatherData.forecast?.forecastday} />
@@ -244,7 +266,7 @@ export function WeatherDashboard() {
           />
         </div>
       )}
-       {!isLoading && !weatherData && !error && !city && ( 
+       {!isLoading && !weatherData && !error && !city && (
         <div className="text-center py-10">
           <p className="text-xl text-muted-foreground">Enter a city to get started.</p>
           <Camera size={48} className="mx-auto mt-4 text-muted-foreground/50" />

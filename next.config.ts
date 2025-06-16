@@ -25,9 +25,28 @@ const nextConfig: NextConfig = {
       },
       { 
         protocol: 'https',
-        hostname: 'openweathermap.org', // Added for OpenWeatherMap icons
+        hostname: 'openweathermap.org', 
         port: '',
         pathname: '/img/wn/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'tile.openweathermap.org', // For map tiles
+        port: '',
+        pathname: '/map/**',
+      },
+      // Add NewsAPI image sources if needed - common ones:
+      {
+        protocol: 'https',
+        hostname: '**.com', // General pattern, might need to be more specific
+      },
+      {
+        protocol: 'https',
+        hostname: '**.org',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.net',
       }
     ],
   },

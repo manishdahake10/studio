@@ -1,10 +1,10 @@
 
 export interface NewsArticle {
-  id: string;
+  id: string; // Will use URL or a combination for uniqueness
   title: string;
-  description: string;
+  description: string | null;
   source: string;
   publishedAt: string; // ISO date string
-  url: string; // URL to the article
-  imageUrl?: string; // Optional image URL
+  url: string;
+  imageUrl?: string | null;
 }

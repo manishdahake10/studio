@@ -1,41 +1,76 @@
 
 import type { NewsArticle } from '@/types/news';
 
-// Mock function to simulate fetching weather news
-// In a real application, this would call a news API
-export async function fetchWeatherNews(city: string): Promise<NewsArticle[]> {
-  console.log(`Fetching news for ${city}... (mocked)`);
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 800));
+const NEWS_API_KEY = process.env.NEXT_PUBLIC_NEWS_API_KEY;
+const NEWS_API_BASE_URL = 'https://newsapi.org/v2/everything';
 
-  // Return mock data
-  return [
-    {
-      id: '1',
-      title: `Major Storm System Developing Near ${city}`,
-      description: 'Meteorologists are tracking a significant weather system expected to bring heavy rain and strong winds to the region later this week.',
-      source: 'Global Weather Network',
-      publishedAt: new Date(Date.now() - 86400000 * 1).toISOString(), // 1 day ago
-      url: '#',
-      imageUrl: 'https://placehold.co/300x200.png',
-    },
-    {
-      id: '2',
-      title: `${city} Experiences Unusually Warm Temperatures for Season`,
-      description: 'Residents are enjoying a spell of warm weather, but experts caution about potential impacts on local ecosystems.',
-      source: 'Local News Chronicle',
-      publishedAt: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
-      url: '#',
-      imageUrl: 'https://placehold.co/300x200.png',
-    },
-    {
-      id: '3',
-      title: 'Understanding the Impact of Climate Change on Weather Patterns in Your Area',
-      description: 'A new report highlights long-term weather trends and discusses how climate change might be affecting local conditions around ' + city + '.',
-      source: 'Climate Watch Institute',
-      publishedAt: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
-      url: '#',
-      imageUrl: 'https://placehold.co/300x200.png',
-    },
-  ];
+interface NewsAPIArticle {
+  source: {
+    id: string | null;
+    name: string;
+  };
+  author: string | null;
+  title: string;
+  description: string | null;
+  url: string;
+  urlToImage: string | null;
+  publishedAt: string; // ISO date string
+  content: string | null;
+}
+
+interface NewsAPIResponse {
+  status: string;
+  totalResults: number;
+  articles: NewsAPIArticle[];
+  code?: string; // For error responses
+  message?: string; // For error responses
+}
+
+export async function fetchWeatherNews(city: string): Promise<NewsArticle[]> {
+  if (!NEWS_API_KEY) {
+    console.warn('News API key (NEXT_PUBLIC_NEWS_API_KEY) is not configured. News will not be fetched.');
+    return [];
+  }
+
+  const query = `${city} weather OR climate OR temperature OR forecast`;
+  const url = `${NEWS_API_BASE_URL}?q=${encodeURIComponent(query)}&apiKey=${NEWS_API_KEY}&language=en&sortBy=publishedAt&pageSize=5`;
+
+  try {
+    const response = await fetch(url);
+    const data: NewsAPIResponse = await response.json();
+
+    if (!response.ok || data.status === 'error') {
+      const errorMsg = data.message || `NewsAPI request failed with status ${response.status}`;
+      console.error(`Error fetching news from NewsAPI.org: ${errorMsg} (Code: ${data.code})`);
+      if (data.code === 'apiKeyInvalid' || data.code === 'apiKeyMissing') {
+        throw new Error(`Invalid or missing NewsAPI key (NEXT_PUBLIC_NEWS_API_KEY). Details: ${errorMsg}`);
+      }
+      throw new Error(errorMsg);
+    }
+
+    if (!data.articles || data.articles.length === 0) {
+      return [];
+    }
+
+    return data.articles.map((article, index) => ({
+      id: article.url || `${article.title}-${index}`, // Ensure unique ID
+      title: article.title,
+      description: article.description,
+      source: article.source.name,
+      publishedAt: article.publishedAt,
+      url: article.url,
+      imageUrl: article.urlToImage,
+    }));
+
+  } catch (error: any) {
+    console.error('Failed to fetch or process news from NewsAPI.org:', error);
+    // Re-throw critical API key errors, otherwise return empty or allow caller to handle
+    if (error.message.includes('NewsAPI key')) {
+        throw error;
+    }
+    // For other errors, we can return empty or throw a generic message
+    // depending on how strictly we want to enforce news availability.
+    // For now, let's return an empty array to not break the UI.
+    return [];
+  }
 }
