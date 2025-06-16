@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'cdn.weatherapi.com', // Kept in case of future switch
+        hostname: 'cdn.weatherapi.com', 
         port: '',
         pathname: '/weather/64x64/**',
       },
@@ -28,28 +28,6 @@ const nextConfig: NextConfig = {
         hostname: 'openweathermap.org',
         port: '',
         pathname: '/img/wn/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'tile.openweathermap.org', // For map tiles
-        port: '',
-        pathname: '/map/**',
-      },
-      { // For CartoDB Dark Matter tiles
-        protocol: 'https',
-        hostname: 'a.basemaps.cartocdn.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'b.basemaps.cartocdn.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'c.basemaps.cartocdn.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'd.basemaps.cartocdn.com',
       },
       // NewsAPI/GNews image sources
       {

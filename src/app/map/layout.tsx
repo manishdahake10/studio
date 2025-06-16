@@ -2,8 +2,8 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Weather Map',
-  description: 'Interactive world map providing environmental and weather information.',
+  title: 'Map',
+  description: 'Map page for Weather Weaver.',
 };
 
 export default function MapLayout({
