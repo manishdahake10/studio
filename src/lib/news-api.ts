@@ -2,52 +2,52 @@
 import type { NewsArticle } from '@/types/news';
 
 const NEWS_API_KEY = process.env.NEXT_PUBLIC_NEWS_API_KEY;
-const NEWS_API_BASE_URL = 'https://newsapi.org/v2/everything';
+const GNEWS_API_BASE_URL = 'https://gnews.io/api/v4/search';
 
-interface NewsAPIArticle {
-  source: {
-    id: string | null;
-    name: string;
-  };
-  author: string | null;
+interface GNewsArticle {
   title: string;
   description: string | null;
-  url: string;
-  urlToImage: string | null;
-  publishedAt: string; // ISO date string
   content: string | null;
+  url: string;
+  image: string | null;
+  publishedAt: string; // ISO 8601 date string
+  source: {
+    name: string;
+    url: string;
+  };
 }
 
-interface NewsAPIResponse {
-  status: string;
-  totalResults: number;
-  articles: NewsAPIArticle[];
-  code?: string; // For error responses
-  message?: string; // For error responses
+interface GNewsResponse {
+  totalArticles: number;
+  articles: GNewsArticle[];
+  // GNews API includes errors directly in the response sometimes
+  errors?: string[];
+  message?: string; // For some error types
 }
 
 export async function fetchWeatherNews(city: string): Promise<NewsArticle[]> {
   if (!NEWS_API_KEY) {
-    console.warn('News API key (NEXT_PUBLIC_NEWS_API_KEY) is not configured. News will not be fetched.');
+    console.warn('GNews API key (NEXT_PUBLIC_NEWS_API_KEY) is not configured. News will not be fetched.');
     return [];
   }
 
-  const query = `${city} weather OR climate OR temperature OR forecast`;
-  const url = `${NEWS_API_BASE_URL}?q=${encodeURIComponent(query)}&apiKey=${NEWS_API_KEY}&language=en&sortBy=publishedAt&pageSize=5`;
+  // Construct a query that is more likely to yield weather-related news for the city
+  const query = `"${city}" (weather OR climate OR temperature OR forecast OR storm OR flood OR heatwave OR drought)`;
+  const url = `${GNEWS_API_BASE_URL}?q=${encodeURIComponent(query)}&token=${NEWS_API_KEY}&lang=en&max=5&sortBy=publishedAt`;
 
   try {
     const response = await fetch(url);
-    const data: NewsAPIResponse = await response.json();
+    const data: GNewsResponse = await response.json();
 
-    if (!response.ok || data.status === 'error') {
-      const errorMsg = data.message || `NewsAPI request failed with status ${response.status}`;
-      console.error(`Error fetching news from NewsAPI.org: ${errorMsg} (Code: ${data.code})`);
-      if (data.code === 'apiKeyInvalid' || data.code === 'apiKeyMissing') {
-        throw new Error(`Invalid or missing NewsAPI key (NEXT_PUBLIC_NEWS_API_KEY). Details: ${errorMsg}`);
+    if (!response.ok || (data.errors && data.errors.length > 0)) {
+      const errorMsg = data.errors ? data.errors.join(', ') : data.message || `GNews API request failed with status ${response.status}`;
+      console.error(`Error fetching news from GNews.io: ${errorMsg}`);
+      if (errorMsg.toLowerCase().includes('api key') || response.status === 401 || response.status === 403) {
+        throw new Error(`Invalid or problematic GNews API key (NEXT_PUBLIC_NEWS_API_KEY). Details: ${errorMsg}`);
       }
       throw new Error(errorMsg);
     }
-
+    
     if (!data.articles || data.articles.length === 0) {
       return [];
     }
@@ -59,18 +59,15 @@ export async function fetchWeatherNews(city: string): Promise<NewsArticle[]> {
       source: article.source.name,
       publishedAt: article.publishedAt,
       url: article.url,
-      imageUrl: article.urlToImage,
+      imageUrl: article.image,
     }));
 
   } catch (error: any) {
-    console.error('Failed to fetch or process news from NewsAPI.org:', error);
-    // Re-throw critical API key errors, otherwise return empty or allow caller to handle
-    if (error.message.includes('NewsAPI key')) {
+    console.error('Failed to fetch or process news from GNews.io:', error);
+    // Re-throw critical API key errors, otherwise return empty
+    if (error.message.includes('GNews API key')) {
         throw error;
     }
-    // For other errors, we can return empty or throw a generic message
-    // depending on how strictly we want to enforce news availability.
-    // For now, let's return an empty array to not break the UI.
     return [];
   }
 }
