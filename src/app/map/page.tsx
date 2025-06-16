@@ -6,7 +6,6 @@ import dynamic from 'next/dynamic';
 import type { LatLngExpression, GeoJSON as LeafletGeoJSON, Layer, PathOptions, Feature, GeoJsonObject, Geometry } from 'leaflet'; // Type-only import
 import type { GeoJSONProps } from 'react-leaflet';
 
-
 // Dynamically import react-leaflet components
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
@@ -32,7 +31,7 @@ const GeoJSON = dynamic<GeoJSONProps>(
   () => import('react-leaflet').then((mod) => mod.GeoJSON),
   { ssr: false }
 );
-const Tooltip = dynamic( // Although not explicitly used in the current version, keeping it for potential future use
+const Tooltip = dynamic(
   () => import('react-leaflet').then((mod) => mod.Tooltip),
   { ssr: false }
 );
@@ -57,10 +56,11 @@ if (typeof window !== 'undefined') {
 export default function MapPage() {
   const [apiKey, setApiKey] = useState<string | undefined>(undefined);
   const [isLeafletReady, setIsLeafletReady] = useState(false);
+  const [mapInstanceKey, setMapInstanceKey] = useState<string | number>(0); // Key for MapContainer
   const [countriesData, setCountriesData] = useState<GeoJsonObject | null>(null);
 
   useEffect(() => {
-    setApiKey(process.env.NEXT_PUBLIC_MAP_API_KEY); // OWM API Key for tile layers
+    setApiKey(process.env.NEXT_PUBLIC_MAP_API_KEY);
     document.title = "Climate Map | Weather Weaver";
 
     if (typeof window !== 'undefined') {
@@ -82,9 +82,11 @@ export default function MapPage() {
           console.warn("Leaflet L.Icon.Default not found for patching.");
         }
         setIsLeafletReady(true);
+        setMapInstanceKey(Date.now()); // Set unique key for MapContainer
       }).catch(error => {
         console.error("Failed to load Leaflet module for icon fix:", error);
-        setIsLeafletReady(true);
+        setIsLeafletReady(true); // Still attempt to render map
+        setMapInstanceKey(Date.now()); // Set unique key for MapContainer
       });
 
       fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json')
@@ -116,24 +118,24 @@ export default function MapPage() {
   const countryStyle: PathOptions = useMemo(() => ({
     fillColor: 'transparent',
     fillOpacity: 0.1,
-    color: '#00FFFF',
+    color: '#00FFFF', // Cyan border
     weight: 1,
     opacity: 0.7,
   }), []);
 
   const highlightFeature = useCallback((e: { target: Layer }) => {
-    const layer = e.target as LeafletGeoJSON;
+    const layer = e.target as LeafletGeoJSON; // Cast to LeafletGeoJSON
     layer.setStyle({
       weight: 2.5,
-      color: '#00FFFF',
-      fillColor: '#00FFFF',
+      color: '#00FFFF', // Cyan
+      fillColor: '#00FFFF', // Cyan fill on hover
       fillOpacity: 0.3,
     });
   }, []);
 
   const resetHighlight = useCallback((e: { target: Layer }) => {
-    const layer = e.target as LeafletGeoJSON;
-    layer.setStyle(countryStyle);
+    const layer = e.target as LeafletGeoJSON; // Cast to LeafletGeoJSON
+    layer.setStyle(countryStyle); // Reset to original style
   }, [countryStyle]);
 
 
@@ -146,6 +148,7 @@ export default function MapPage() {
       mouseout: resetHighlight,
       click: () => {
         console.log(`Clicked on ${countryName}`);
+        // Ensure layer has bindPopup method before calling
         if ((layer as any).bindPopup) {
             (layer as LeafletGeoJSON).bindPopup(`Detailed info for ${countryName} coming soon!`).openPopup();
         }
@@ -169,7 +172,7 @@ export default function MapPage() {
       >
         {isLeafletReady ? (
           <Suspense fallback={<div className="flex items-center justify-center h-full bg-slate-800 text-slate-300"><p>Initializing map components...</p></div>}>
-            <MapContainer center={position} zoom={initialZoom} scrollWheelZoom={true} style={{ height: '100%', width: '100%', background: '#0a0f14' }}>
+            <MapContainer key={mapInstanceKey} center={position} zoom={initialZoom} scrollWheelZoom={true} style={{ height: '100%', width: '100%', background: '#0a0f14' }}>
               <LayersControl position="topright">
                 <LayersControl.BaseLayer checked name="Dark Matter Base">
                   <TileLayer
@@ -183,7 +186,7 @@ export default function MapPage() {
                 {countriesData && GeoJSON && (
                   <LayersControl.Overlay checked name="Country Borders">
                     <GeoJSON
-                        key={JSON.stringify(countriesData)}
+                        key={JSON.stringify(countriesData)} // Key to re-render if data changes
                         data={countriesData}
                         style={countryStyle}
                         onEachFeature={onEachCountry}
@@ -222,7 +225,7 @@ export default function MapPage() {
               {Marker && Popup && <Marker position={[51.505, -0.09]}><Popup>London (Example)</Popup></Marker>}
             </MapContainer>
           </Suspense>
-        ) : null}
+        ) : null }
       </div>
       <div className="mt-6 p-4 border rounded-lg bg-card text-card-foreground shadow">
         <h2 className="text-xl font-semibold mb-2">Developer Note:</h2>
@@ -237,16 +240,16 @@ export default function MapPage() {
       </div>
        <style jsx global>{`
         .country-tooltip {
-          background-color: rgba(0, 20, 30, 0.85) !important;
-          border: 1px solid #00FFFF !important;
-          color: #00FFFF !important;
+          background-color: rgba(0, 20, 30, 0.85) !important; /* Dark, slightly transparent cyan-ish */
+          border: 1px solid #00FFFF !important; /* Neon cyan border */
+          color: #00FFFF !important; /* Neon cyan text */
           border-radius: 4px;
-          box-shadow: 0 0 10px #00FFFF;
-          font-family: 'Courier New', Courier, monospace;
+          box-shadow: 0 0 10px #00FFFF; /* Glowing effect */
+          font-family: 'Courier New', Courier, monospace; /* Hacker-style font */
         }
         .leaflet-popup-content-wrapper {
-          background: rgba(0, 20, 30, 0.9) !important;
-          color: #E0F2F1 !important;
+          background: rgba(0, 20, 30, 0.9) !important; /* Darker for popup */
+          color: #E0F2F1 !important; /* Light text for readability */
           border: 1px solid #00FFFF;
           border-radius: 4px;
           box-shadow: 0 0 8px #00FFFF;
@@ -257,22 +260,25 @@ export default function MapPage() {
         }
         .leaflet-popup-tip {
           background: rgba(0, 20, 30, 0.9) !important;
-          border-left-color: #00FFFF !important;
+          /* Tip color might need to be adjusted based on exact border appearance */
+          border-left-color: #00FFFF !important; 
           border-right-color: #00FFFF !important;
         }
+        /* Style the LayersControl to fit the theme */
         .leaflet-control-layers {
-            background: rgba(10, 15, 20, 0.85) !important;
-            color: #E0F2F1 !important;
-            border: 1px solid #00FFFF !important;
-            box-shadow: 0 0 8px #00FFFF;
+            background: rgba(10, 15, 20, 0.85) !important; /* Dark, slightly transparent */
+            color: #E0F2F1 !important; /* Light text */
+            border: 1px solid #00FFFF !important; /* Neon cyan border */
+            box-shadow: 0 0 8px #00FFFF; /* Glowing effect */
         }
         .leaflet-control-layers-base label, .leaflet-control-layers-overlays label {
-            color: #E0F2F1 !important;
+            color: #E0F2F1 !important; /* Ensure text inside is light */
         }
         .leaflet-control-layers-selector {
-            margin-right: 5px;
+            margin-right: 5px; /* Ensure spacing for radio/checkbox */
         }
       `}</style>
     </div>
   );
 }
+
