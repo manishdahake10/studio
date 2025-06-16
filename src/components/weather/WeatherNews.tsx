@@ -37,7 +37,7 @@ export function WeatherNews({ newsArticles, cityName }: WeatherNewsProps) {
           <Newspaper size={22} className="mr-2 text-primary" />
           Weather News {cityName ? `for ${cityName}` : ''}
         </CardTitle>
-        <CardDescription>Latest weather-related headlines from NewsAPI.org.</CardDescription>
+        <CardDescription>Latest weather-related headlines from GNews.io.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">

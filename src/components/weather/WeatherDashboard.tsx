@@ -7,8 +7,9 @@ import { CurrentWeather } from './CurrentWeather';
 import { ForecastDisplay } from './ForecastDisplay';
 import { ForecastCharts } from './ForecastCharts';
 import { AirQualityModule } from './AirQualityModule';
+import { WeatherNews } from './WeatherNews'; // Added import
 import { fetchWeatherData } from '@/lib/weather-api';
-import { fetchWeatherNews } from '@/lib/news-api'; // Assuming GNews is still used
+import { fetchWeatherNews } from '@/lib/news-api';
 import type { WeatherAPIResponse } from '@/types/weather';
 import type { NewsArticle } from '@/types/news';
 import { useToast } from "@/hooks/use-toast";
@@ -21,20 +22,18 @@ const LAST_CITY_KEY = 'weatherweaver_last_city';
 export function WeatherDashboard() {
   const [weatherData, setWeatherData] = useState<WeatherAPIResponse | null>(null);
   const [newsArticles, setNewsArticles] = useState<NewsArticle[] | null>(null);
-  const [city, setCity] = useState<string>(''); // Initialized to empty, will not be auto-filled on mount
-  const [isLoading, setIsLoading] = useState(false); // Set to false initially, true when loading
-  const [isNewsLoading, setIsNewsLoading] = useState(false); // Set to false initially
+  const [city, setCity] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isNewsLoading, setIsNewsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-
-  // Removed useEffect that auto-loaded city from localStorage or default
 
   useEffect(() => {
     if (city && (!weatherData || weatherData.location.name.toLowerCase() !== city.toLowerCase())) {
       loadInitialData(city);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [city]); // Keep dependencies minimal for this effect if loadInitialData is stable
+  }, [city]);
 
   const loadInitialData = useCallback(async (cityName: string) => {
     setIsLoading(true);
@@ -94,7 +93,6 @@ export function WeatherDashboard() {
   const handleSearch = (searchedCity: string) => {
     if (searchedCity.trim() === "") return;
     setCity(searchedCity.trim());
-    // Setting city here will trigger the useEffect above to call loadInitialData
   };
   
   const NewsSectionSkeleton = () => (
@@ -238,10 +236,8 @@ export function WeatherDashboard() {
         </Alert>
       )}
 
-      {/* Show skeleton only when a search is initiated (city is present) and loading */}
       {(isLoading || isNewsLoading) && city && <CombinedSkeleton />} 
       
-      {/* Show data when not loading and (weatherData or newsArticles exist) */}
       {!isLoading && !isNewsLoading && (weatherData || newsArticles) && (
         <div className="space-y-6">
             <WeatherNews newsArticles={newsArticles} cityName={weatherData?.location.name} />
@@ -259,14 +255,12 @@ export function WeatherDashboard() {
           )}
         </div>
       )}
-      {/* Initial state message when no city has been searched yet */}
        {!city && !isLoading && !error && (
         <div className="text-center py-10">
           <p className="text-xl text-muted-foreground">Enter a city to get started.</p>
           <Camera size={48} className="mx-auto mt-4 text-muted-foreground/50" />
         </div>
       )}
-      {/* Message when city is searched, but no weather data and no error (e.g., API returned empty for a valid city) */}
        {city && !isLoading && !weatherData && !error && (
         <div className="text-center py-10">
           <p className="text-xl text-muted-foreground">No weather data to display for {city}. Try another search.</p>
