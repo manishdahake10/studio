@@ -35,10 +35,26 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/map/**',
       },
+      { // For CartoDB Dark Matter tiles
+        protocol: 'https',
+        hostname: 'a.basemaps.cartocdn.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'b.basemaps.cartocdn.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'c.basemaps.cartocdn.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'd.basemaps.cartocdn.com',
+      },
       // NewsAPI/GNews image sources
       {
         protocol: 'https',
-        hostname: 'www.theweek.in', // Added for the specific error
+        hostname: 'www.theweek.in',
         port: '',
         pathname: '/**',
       },
