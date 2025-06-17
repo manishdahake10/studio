@@ -14,7 +14,7 @@ import type { WeatherAPIResponse } from '@/types/weather';
 import type { NewsArticle } from '@/types/news';
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, Wind, Camera, Newspaper } from "lucide-react";
+import { Terminal, Wind, Newspaper, Info } from "lucide-react"; // Removed Camera
 import { Skeleton } from "@/components/ui/skeleton";
 
 const LAST_CITY_KEY = 'weatherweaver_last_city';
@@ -27,6 +27,15 @@ export function WeatherDashboard() {
   const [isNewsLoading, setIsNewsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Load last searched city from localStorage only on initial mount
+    const lastCity = localStorage.getItem(LAST_CITY_KEY);
+    if (lastCity) {
+      setCity(lastCity);
+    }
+  }, []);
+
 
   useEffect(() => {
     if (city && (!weatherData || weatherData.location.name.toLowerCase() !== city.toLowerCase())) {
@@ -258,7 +267,7 @@ export function WeatherDashboard() {
        {!city && !isLoading && !error && (
         <div className="text-center py-10">
           <p className="text-xl text-muted-foreground">Enter a city to get started.</p>
-          <Camera size={48} className="mx-auto mt-4 text-muted-foreground/50" />
+          <Info size={48} className="mx-auto mt-4 text-muted-foreground/50" />
         </div>
       )}
        {city && !isLoading && !weatherData && !error && (
