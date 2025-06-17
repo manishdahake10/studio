@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { CloudSun } from "lucide-react";
+import { CloudSun, MapPin } from "lucide-react"; // MapPin was removed previously, ensuring it's not re-added unless explicitly requested
 
 export function Header() {
   return (
@@ -19,6 +19,9 @@ export function Header() {
           </Link>
           <Link href="/about" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
             About
+          </Link>
+          <Link href="/privacy-policy" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+            Privacy Policy
           </Link>
           <ThemeToggle />
         </nav>
