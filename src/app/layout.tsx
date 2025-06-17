@@ -13,6 +13,10 @@ export const metadata: Metadata = {
     template: '%s | Weather Weaver',
   },
   description: 'Weave through weather forecasts. Real-time data, 7-day forecast, and more.',
+  icons: {
+    icon: '/icon.png', // Assumes icon.png is in src/app/
+    apple: '/apple-icon.png', // Assumes apple-icon.png is in src/app/ for Apple devices
+  },
 };
 
 export default function RootLayout({
