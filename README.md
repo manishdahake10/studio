@@ -91,14 +91,6 @@ npx next export
 ✅ Live on Netlify:
 🔗 https://weather-weaver.netlify.app/
 
-Can also be deployed on:
-
-Firebase Hosting
-
-GitHub Pages (via static export)
-
-Vercel
-
 ## Author Info
 👨‍💻 Manish Rajendra Dahake
 
